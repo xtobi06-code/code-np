@@ -61,9 +61,10 @@ function finanzenHtml() {
     <div class="zeile"><span class="lbl">Monatsbudget</span><input class="zahl" inputmode="decimal" data-p="e.monatsbudget" value="${esc(S.e.monatsbudget ?? '')}"> €</div>
   </div>
   <div class="gruppe-titel"><span>Budget pro Kategorie</span><span>Summe ${euro(summe)}</span></div>
-  <div class="gruppe">${S.kats.map((k, i) => `<div class="zeile" data-reihe="kats" style="--einzug:58px">
+  <div class="gruppe">${S.kats.map((k, i) => (k.name === 'Sonstiges' ? (x) => x : (x) => wisch(`kats.${i}`, x))(`<div class="zeile" data-reihe="kats" style="--einzug:58px">
     <span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span><span class="lbl">${esc(k.name)}</span>
-    <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €${griff('kats', i)}</div>`).join('')}</div>
+    <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €${griff('kats', i)}</div>`)).join('')}</div>
+  <p class="fuss">Nach links wischen löscht eine Kategorie. Ihre bisherigen Ausgaben wandern zu Sonstiges, der alte Kategoriename steht dann als Notiz dabei.</p>
   <div class="gruppe-titel">Dauerkosten (am Monatsersten gebucht)</div>
   <div class="gruppe">${S.dauer.map((d, i) => wisch(`dauer.${i}`, `<div class="zeile" data-reihe="dauer" style="flex-wrap:wrap;row-gap:4px">
     ${schalter(`dauer.${i}.aktiv`, d.aktiv !== false)}
@@ -218,9 +219,24 @@ function anleitungHtml() {
   Läuft das Token ab, muss es auch hier ersetzt werden.</div></details></div>`;
 }
 
+const APP_DATEIEN = ['./', 'index.html', 'einstellungen.html', 'phone.js', 'phone.css', 'einstellungen.js', 'panel/', 'panel/index.html', 'panel/panel.js', 'panel/panel.css',
+  'shared/app.js', 'shared/core.js', 'shared/finance.js', 'shared/github.js', 'shared/icons.js', 'shared/scene.css', 'shared/scene.js', 'shared/style.css', 'shared/tasks.js', 'shared/util.js', 'shared/weather.js'];
+function appHtml() {
+  return `<div class="gruppe-titel">App</div>
+  <div class="gruppe"><div class="zeile"><button class="textknopf" style="padding:0" id="app-neu">App neu laden (neueste Version holen)</button></div></div>
+  <p class="fuss" id="app-neu-m">Holt alle Dateien frisch vom Server. Danach die App einmal komplett schließen und neu öffnen.</p>`;
+}
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('#app-neu')) return;
+  const m = $('app-neu-m');
+  m.textContent = 'Lade …';
+  await Promise.allSettled(APP_DATEIEN.map((d) => fetch(d, { cache: 'reload' })));
+  m.textContent = 'Fertig. Jetzt die App schließen und neu öffnen.';
+});
+
 function zeichne() {
   offeneWisch = null;
-  $('inhalt').innerHTML = verbindungHtml() + (S ? finanzenHtml() + lichtHtml() + panelHtml() + regelnHtml() + moduleHtml() + semesterHtml() + kleidungHtml() + anleitungHtml() : '');
+  $('inhalt').innerHTML = verbindungHtml() + (S ? finanzenHtml() + lichtHtml() + panelHtml() + regelnHtml() + moduleHtml() + semesterHtml() + kleidungHtml() + anleitungHtml() + appHtml() : '');
   if (S && S.panel.hintergrund === 'fotos') fotosZeigen();
 }
 
@@ -342,6 +358,15 @@ document.addEventListener('click', async (e) => {
 async function sichern(was) {
   {
     if (was === 'finanzen') {
+      const weg = (F['kategorien.json']?.kategorien || []).map((k) => k.name).filter((n) => !S.kats.some((k) => k.name === n));
+      if (weg.length) {
+        await aendere('kosten.json', (d) => {
+          for (const b of d.buchungen || []) {
+            if (weg.includes(b.kategorie)) { b.text = b.text ? `${b.kategorie}: ${b.text}` : b.kategorie; b.kategorie = 'Sonstiges'; }
+          }
+          return d;
+        }, 'Kategorie gelöscht, Ausgaben zu Sonstiges');
+      }
       await aendere('einstellungen.json', (d) => ({ ...d, monatsbudget: S.e.monatsbudget }), 'Budget geändert');
       await aendere('kategorien.json', (d) => ({ ...d, kategorien: S.kats }), 'Kategorien geändert');
       await aendere('dauerkosten.json', (d) => ({ ...d, posten: S.dauer.filter((x) => x.name) }), 'Dauerkosten geändert');
@@ -448,6 +473,7 @@ let wischZeit = 0;
 function wischSetze(w, t, anim) {
   w.querySelector('.vorn').style.transform = t ? `translateX(${t}px)` : '';
   w.querySelector('.loesch').style.width = `${-t}px`;
+  w.classList.toggle('auf', t < 0);
 }
 function wischZu() {
   if (!offeneWisch) return;

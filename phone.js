@@ -358,6 +358,7 @@ function ring(anteil, farbe, groesse = 64) {
     <text x="32" y="37" text-anchor="middle">${Math.round(anteil * 100)}%</text></svg>`;
 }
 function renderFinanzen() {
+  offeneZeile = null;
   const k = kats();
   if (!k.length) { $('fin-held').innerHTML = '<div class="unter">Keine Kategorien angelegt.</div>'; $('fin-kat').innerHTML = ''; $('fin-letzte').innerHTML = ''; return; }
   const u = uebersicht(F['kosten.json'], k, F['einstellungen.json'], S.zeitraum);
@@ -392,12 +393,24 @@ function renderFinanzen() {
   const letzte = aktive(F['kosten.json']).filter((b) => b.quelle !== 'dauer').sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 5);
   $('fin-letzte').innerHTML = letzte.length ? `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe">${letzte.map((b) => {
     const kk = katVon(b.kategorie);
-    return `<div class="zeile buchung" data-buchung="${esc(b.id)}"><span class="symbol" style="background:${kk.farbe}">${icon(katSymbol(kk.name), 17, 2.2)}</span>
-      <div class="haupt"><div>${esc(b.text || kk.name)}</div><div class="unter">${esc(fmtWtDM(b.datum))}${b.text ? ` · ${esc(kk.name)}` : ''}</div></div><span class="betrag">${euro(b.betrag)}</span></div>`;
+    return `<div class="zeile task buchung" data-buchung="${esc(b.id)}"><div class="vorn"><span class="symbol" style="background:${kk.farbe}">${icon(katSymbol(kk.name), 17, 2.2)}</span>
+      <div class="haupt"><div>${esc(kk.name)}</div><div class="unter">${esc(fmtWtDM(b.datum))}${b.text ? ` · ${esc(b.text)}` : ''}</div></div><span class="betrag">${euro(b.betrag)}</span></div><button class="loesch" data-bloesch="${esc(b.id)}">Löschen</button></div>`;
   }).join('')}</div>` : '';
 }
 $('tab-finanzen').addEventListener('click', (e) => {
+  const bl = e.target.closest('[data-bloesch]');
+  if (bl) {
+    const id = bl.dataset.bloesch;
+    const setze = (v) => { aendereOp('kosten.json', { liste: 'buchungen', ids: [id], felder: { storniert: v } }, v ? 'Ausgabe gelöscht' : 'Ausgabe wiederhergestellt').catch(() => {}); render(); };
+    setze(true);
+    toast('Ausgabe gelöscht', { label: 'Rückgängig', fn: () => setze(false) });
+    return;
+  }
   const b = e.target.closest('[data-buchung]');
+  if (b && b.classList.contains('task')) {
+    if (Date.now() - wischZeit < 350) return;
+    if (offeneZeile) { schliesseZeile(); return; }
+  }
   if (b) { kostenBlatt(b.dataset.buchung); return; }
   const z = e.target.closest('[data-kat]');
   if (!z) return;
@@ -572,9 +585,8 @@ function schliesseZeile() {
   offeneZeile.querySelector('.loesch').style.width = '';
   offeneZeile = null;
 }
-{
+for (const liste of [$('todo-liste'), $('fin-letzte')]) {
   let d = null;
-  const liste = $('todo-liste');
   liste.addEventListener('pointerdown', (e) => {
     const vorn = e.target.closest('.vorn');
     if (!vorn) { schliesseZeile(); return; }

@@ -22,13 +22,14 @@
   .wisch { position: relative; overflow: hidden; }
   .wisch + .wisch::before, .wisch + .zeile::before { content: ""; position: absolute; top: 0; right: 0; left: 18px; border-top: .5px solid var(--linie); z-index: 2; }
   .wisch .vorn { position: relative; z-index: 1; background: var(--karte); transition: transform .28s cubic-bezier(.25,.9,.3,1); touch-action: pan-y; }
-  .wisch .loesch { position: absolute; top: 0; right: 0; bottom: 0; width: 0; overflow: hidden; white-space: nowrap; border: 0; padding: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; transition: width .28s cubic-bezier(.25,.9,.3,1); }
+  .wisch .loesch { visibility: hidden; position: absolute; top: 0; right: 0; bottom: 0; width: 0; overflow: hidden; white-space: nowrap; border: 0; padding: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; transition: width .28s cubic-bezier(.25,.9,.3,1), visibility 0s linear .28s; }
+  .wisch.zieht .loesch, .wisch.auf .loesch { visibility: visible; transition-delay: 0s; }
   .wisch.zieht .vorn, .wisch.zieht .loesch { transition: none; }
   .frage-box { position: relative; }
   .frage-zu { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: var(--t2); display: grid; place-items: center; padding: 0; }
   .knopf.leicht { background: rgba(255,255,255,.05); border: .5px solid rgba(255,255,255,.18); color: var(--bad); }
   .frage-box p { margin: 0 0 6px; color: var(--t2); font-size: 15px; }
-  .zurueck .ic { transform: rotate(180deg); }
+  .zurueck .ic { transform: translateX(-1.5px) rotate(180deg); }
   h1 { font-size: 34px; font-weight: 700; margin: 0 0 18px; }
   .zeile label, .zeile .lbl { flex: 1; min-width: 0; }
   .zeile label.schalter { flex: none; }

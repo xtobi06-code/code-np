@@ -118,7 +118,8 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .zeile.task { padding: 0; overflow: hidden; }
 .task .vorn { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 9px 18px; width: 100%; box-sizing: border-box; background: var(--karte); position: relative; z-index: 1; transition: transform .28s cubic-bezier(.25,.9,.3,1); touch-action: pan-y; }
 .task.zieht .vorn, .task.zieht .loesch { transition: none; }
-.task .loesch { position: absolute; top: 0; right: 0; bottom: 0; width: 0; padding: 0; overflow: hidden; white-space: nowrap; transition: width .28s cubic-bezier(.25,.9,.3,1); border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }
+.task.zieht .loesch, .task.auf .loesch { visibility: visible; transition-delay: 0s; }
+.task .loesch { visibility: hidden; position: absolute; top: 0; right: 0; bottom: 0; width: 0; padding: 0; overflow: hidden; white-space: nowrap; transition: width .28s cubic-bezier(.25,.9,.3,1), visibility 0s linear .28s; border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }
 
 
 /* ---------- Liquid-Glass-Look (nur Handy-App) ---------- */
