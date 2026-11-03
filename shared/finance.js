@@ -27,15 +27,19 @@ export function uebersicht(kosten, kats, einst, zeitraum, jetzt = new Date()) {
   }
   const set = new Set(monate);
   const n = monate.length;
-  const im = bs.filter((b) => set.has(b.datum.slice(0, 7)));
+  const alleIm = bs.filter((b) => set.has(b.datum.slice(0, 7)));
+  // Dauerkosten sind fix: Sie werden vom Budget abgezogen und tauchen nicht als Ausgaben auf.
+  const im = alleIm.filter((b) => b.quelle !== 'dauer');
+  const fixKat = (name) => alleIm.filter((b) => b.quelle === 'dauer' && b.kategorie === name).reduce((s, b) => s + b.betrag, 0) / n;
+  const fix = alleIm.filter((b) => b.quelle === 'dauer').reduce((s, b) => s + b.betrag, 0) / n;
   const summe = im.reduce((s, b) => s + b.betrag, 0);
   const katSumme = kats.reduce((s, k) => s + (Number(k.budget) || 0), 0);
-  const budget = Number(einst?.monatsbudget) || katSumme;
+  const budget = Math.max(0, (Number(einst?.monatsbudget) || katSumme) - fix);
   const bekannt = new Set(kats.map((k) => k.name));
   const ks = kats.map((k) => {
     const e = im.filter((b) => b.kategorie === k.name || (k.name === 'Sonstiges' && !bekannt.has(b.kategorie)));
     const s = e.reduce((x, b) => x + b.betrag, 0);
-    return { ...k, summe: s, wert: s / n, eintraege: e.sort((a, b) => b.datum.localeCompare(a.datum)) };
+    return { ...k, budget: k.budget ? Math.max(0, Number(k.budget) - fixKat(k.name)) : k.budget, fix: fixKat(k.name), summe: s, wert: s / n, eintraege: e.sort((a, b) => b.datum.localeCompare(a.datum)) };
   });
   let rest = null;
   let restTag = null;
@@ -44,7 +48,7 @@ export function uebersicht(kosten, kats, einst, zeitraum, jetzt = new Date()) {
     const letzter = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0).getDate();
     restTag = rest / (letzter - jetzt.getDate() + 1);
   }
-  return { N, n, monate, summe, wert: summe / n, budget, rest, restTag, kats: ks };
+  return { N, n, monate, summe, wert: summe / n, fix, budget, rest, restTag, kats: ks };
 }
 
 export function verlauf(kosten, kat, jetzt = new Date()) {

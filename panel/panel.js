@@ -108,7 +108,7 @@ function pixelVersatz() {
 /* ---------- Aufgaben ---------- */
 function zeileHtml(a) {
   const ueber = ueberfaellig(a);
-  const meta = ueber ? fmtDM(a.faellig) : metaText(a);
+  const meta = ueber ? fmtDM(a.faellig || a.datum) : metaText(a);
   const heute = !ueber && istHeute(a) && meta !== '';
   return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
     <span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div>`;

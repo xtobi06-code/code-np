@@ -87,19 +87,20 @@ export function erzeugen(e, regeln, vorhanden, jetzt = new Date()) {
   return neu;
 }
 
-const sk = (a) => a.faellig || a.ab || a.datum || (a.erstellt || '').slice(0, 10) || '';
+const sk = (a) => a.faellig || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
 export function istHeute(a, jetzt = new Date()) {
   const h = isoDate(jetzt);
   if (a.faellig) return a.faellig === h;
   return a.ab === h || a.datum === h || (!a.regel && (a.erstellt || '').startsWith(h));
 }
 export function ueberfaellig(a, jetzt = new Date()) {
-  return !!a.faellig && a.faellig < isoDate(jetzt);
+  const d = a.faellig || (a.regel ? a.datum : null);
+  return !!d && d < isoDate(jetzt);
 }
 export function offene(aufgaben, liste, jetzt = new Date()) {
   return aufgaben
     .filter((a) => a.liste === liste && a.status === 'offen')
-    .sort((x, y) => (ueberfaellig(y, jetzt) - ueberfaellig(x, jetzt)) || (istHeute(y, jetzt) - istHeute(x, jetzt)) || sk(x).localeCompare(sk(y)) || x.titel.localeCompare(y.titel));
+    .sort((x, y) => (ueberfaellig(y, jetzt) - ueberfaellig(x, jetzt)) || (istHeute(y, jetzt) - istHeute(x, jetzt)) || sk(x).localeCompare(sk(y)) || (x.modul || '').localeCompare(y.modul || '') || x.titel.localeCompare(y.titel));
 }
 export function erledigte(aufgaben, liste) {
   return aufgaben.filter((a) => a.liste === liste && a.status === 'erledigt')

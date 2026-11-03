@@ -109,7 +109,7 @@ function taskHtml(a, erl = false) {
   const ueber = !erl && ueberfaellig(a);
   const heuteTag = !erl && istHeute(a) && (a.faellig || a.regel);
   if (heuteTag) meta = 'Heute';
-  if (ueber) meta = fmtWtDM(a.faellig);
+  if (ueber) meta = fmtWtDM(a.faellig || a.datum);
   return `<div class="zeile task${erl ? ' erl' : ''}" style="${farbStil(farbeVon(a))}" data-id="${esc(a.id)}">
     <button class="kreis${erl ? ' an' : ''}" data-aktion="${erl ? 'wieder' : 'erledigt'}" aria-label="${erl ? 'Wiederherstellen' : 'Erledigt'}">${icon('check', 14, 3.2)}</button>
     <span class="haupt titel" data-aktion="bearbeiten">${titelHtml(a)}</span>${meta ? `<span class="neben${heuteTag ? ' heute' : ''}${ueber ? ' ueber' : ''}">${esc(meta)}</span>` : ''}</div>`;
@@ -338,7 +338,7 @@ function renderFinanzen() {
     $('fin-held').innerHTML = `<div class="reihe"><div><div class="klein">${ueber ? 'Über Budget' : `Übrig im ${monatName(monatKey(new Date()))}`}</div>
       <div class="gross" style="${ueber ? 'color:var(--bad)' : ''}">${euro(Math.abs(u.rest))}</div>
       <div class="unter">${ueber ? 'Ab jetzt bitte sparsam.' : `<b>${euro(u.restTag)}</b> pro Tag verfügbar`}</div></div>${ring(u.budget ? u.summe / u.budget : 0, farbe)}</div>
-      <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">${euro(u.summe)} von ${euro0(u.budget)} ausgegeben</div>`;
+      <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">${euro(u.summe)} von ${euro0(u.budget)} ausgegeben${u.fix ? ` · ${euro0(u.fix)} Fixkosten schon abgezogen` : ''}</div>`;
     $('fin-hinweis').textContent = 'Ausgaben / Budget';
   } else {
     $('fin-held').innerHTML = `<div class="reihe"><div><div class="klein">Ø pro Monat</div>
@@ -526,3 +526,11 @@ starteZyklus(() => laden(), 60);
 starteZyklus(wetter, 900);
 addEventListener('online', () => laden());
 starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);
+
+// Kopfzeilen-Unschärfe nur, wenn der Inhalt darunter wirklich scrollt.
+{
+  const kante = document.querySelector('.kante-oben');
+  const pruefe = () => kante && kante.classList.toggle('an', scrollY > 6);
+  addEventListener('scroll', pruefe, { passive: true });
+  pruefe();
+}
