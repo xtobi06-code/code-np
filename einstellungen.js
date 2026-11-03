@@ -164,7 +164,7 @@ function regelnHtml() {
 function kleidungHtml() {
   return `<div class="gruppe-titel">Kleidungsempfehlung (gefühlte Temperatur 7 bis 20 Uhr, kälteste Stunde)</div>
   <div class="gruppe">${S.stufen.map((s, i) => wisch(`stufen.${i}`, `<div class="zeile"><span class="lbl" style="flex:none;color:var(--t2)">&lt;</span>
-    <span style="display:flex;align-items:baseline;gap:3px;flex:none"><input class="zahl" style="width:34px;text-align:right" inputmode="numeric" data-p="stufen.${i}.bis" value="${esc(s.bis)}"><span>°C</span></span>
+    <span style="display:flex;align-items:baseline;gap:2px;flex:none"><input class="zahl" style="width:2.6em;min-width:2.6em;flex:none;padding:0;text-align:right" size="3" inputmode="numeric" data-p="stufen.${i}.bis" value="${esc(s.bis)}"><span style="color:var(--t2)">°C</span></span>
     <input class="links" style="flex:1" data-p="stufen.${i}.text" value="${esc(s.text)}">
     </div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="stufen">Stufe hinzufügen</button></div>
@@ -324,12 +324,19 @@ document.addEventListener('change', (e) => {
   const el = e.target.closest('[data-p]');
   if (!el || !S) return;
   setze(el.dataset.p, wertVon(el));
-  if (el.hasAttribute('data-neu-zeichnen') || el.type === 'checkbox' || el.dataset.p.endsWith('.modul') || el.dataset.p.endsWith('.typ') || el.dataset.p.startsWith('kats') || el.type === 'color') zeichne();
+  if (el.type === 'color') return farbVorschau(el); // nicht neu zeichnen, sonst schließt iOS die Farbauswahl
+  if (el.hasAttribute('data-neu-zeichnen') || el.type === 'checkbox' || el.dataset.p.endsWith('.modul') || el.dataset.p.endsWith('.typ') || el.dataset.p.startsWith('kats')) zeichne();
 });
+function farbVorschau(el) {
+  const [k, i] = el.dataset.p.split('.');
+  const feld = k === 'kats' ? document.querySelector(`.symbol[data-kat-auf="${i}"]`) : k === 'licht' ? document.querySelector(`[data-licht-auf="${i}"] .symbol`) : null;
+  if (feld) feld.style.background = el.value;
+}
 document.addEventListener('input', (e) => {
   const el = e.target.closest('[data-p]');
   if (!el || !S || el.type === 'checkbox' || el.tagName === 'SELECT') return;
   setze(el.dataset.p, wertVon(el));
+  if (el.type === 'color') farbVorschau(el);
 });
 
 const NEU = {
