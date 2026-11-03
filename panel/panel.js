@@ -153,8 +153,8 @@ function listen() { liste('studium'); liste('leben'); }
 
 /* ---------- Licht ---------- */
 function shortcutUrl(name) {
-  const z = encodeURIComponent(location.href.split('#')[0]);
-  return `shortcuts://x-callback-url/run-shortcut?name=${encodeURIComponent(name)}&x-success=${z}&x-cancel=${z}&x-error=${z}`;
+  // Ohne Rücksprung-URL: Die würde in Safari statt in der Web-App landen.
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(name)}`;
 }
 function kachel(m, i, gross) {
   const zuletzt = LS.get('np-licht', null);
