@@ -1,4 +1,4 @@
-import { F, ladeAlle, aendere, routine, beiFehler, FehlerToken } from './shared/core.js';
+import { F, ladeAlle, aendere, aendereOp, nachholen, beiOffline, offenNachzureichen, routine, beiFehler, FehlerToken } from './shared/core.js';
 import { offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
@@ -22,6 +22,7 @@ const heute = () => isoDate(new Date());
 const morgen = () => isoDate(addDays(new Date(), 1));
 
 beiFehler((e) => toast(e instanceof FehlerToken ? 'Token ungültig, bitte in den Einstellungen erneuern' : 'Speichern fehlgeschlagen, Verbindung prüfen'));
+beiOffline((n) => toast(`Offline gespeichert · ${n} ${n === 1 ? 'Änderung wird' : 'Änderungen werden'} nachgereicht`));
 
 $('zahnrad').innerHTML = icon('regler', 19, 2);
 $('neu').innerHTML = icon('plus', 21, 2.4);
@@ -137,11 +138,8 @@ $('erledigt-umschalten').onclick = () => { S.zeigeErledigt = !S.zeigeErledigt; r
 
 function setzeStatus(id, neu) {
   const zeit = new Date().toISOString();
-  return aendere('aufgaben.json', (d) => {
-    const a = d.aufgaben.find((x) => x.id === id);
-    if (a) { a.status = neu; a.erledigt = neu === 'erledigt' ? zeit : null; }
-    return d;
-  }, neu === 'erledigt' ? 'Abgehakt' : neu === 'geloescht' ? 'Gelöscht' : 'Wiederhergestellt').catch(() => {});
+  return aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: neu, erledigt: neu === 'erledigt' ? zeit : null } },
+    neu === 'erledigt' ? 'Abgehakt' : neu === 'geloescht' ? 'Gelöscht' : 'Wiederhergestellt').catch(() => {});
 }
 $('tab-todos').addEventListener('click', (e) => {
   const b = e.target.closest('[data-aktion]');
@@ -203,7 +201,7 @@ $('todo-input').addEventListener('keydown', (e) => {
   if (S.todoListe === 'studium' && S.neuModul) neu.modul = S.neuModul;
   if (S.neuFaellig) neu.faellig = S.neuFaellig;
   S.neuFaellig = '';
-  aendere('aufgaben.json', (d) => { if (!d.aufgaben.some((a) => a.id === neu.id)) d.aufgaben.push(neu); return d; }, 'Neue Aufgabe').catch(() => {});
+  aendereOp('aufgaben.json', { liste: 'aufgaben', neu }, 'Neue Aufgabe').catch(() => {});
   renderTodos();
   badges();
 });
@@ -238,16 +236,11 @@ $('blatt-aufgabe').addEventListener('change', (e) => { if (e.target.dataset.datu
 $('aufgabe-sichern').onclick = () => {
   const b = bearbeite;
   const titel = $('aufgabe-titel').value.trim() || b.titel;
-  aendere('aufgaben.json', (d) => {
-    const a = d.aufgaben.find((x) => x.id === b.id);
-    if (a) {
-      a.titel = titel;
-      a.liste = b.liste;
-      if (b.liste === 'studium' && b.modul) a.modul = b.modul; else if (!a.regel) delete a.modul;
-      if (b.faellig) a.faellig = b.faellig; else delete a.faellig;
-    }
-    return d;
-  }, 'Aufgabe geändert').catch(() => {});
+  const felder = { titel, liste: b.liste };
+  const weg = [];
+  if (b.liste === 'studium' && b.modul) felder.modul = b.modul; else if (!b.regel) weg.push('modul');
+  if (b.faellig) felder.faellig = b.faellig; else weg.push('faellig');
+  aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [b.id], felder, weg }, 'Aufgabe geändert').catch(() => {});
   schliesse();
   render();
 };
@@ -289,14 +282,14 @@ function renderEinkauf() {
   const vor = Object.values(zaehler).sort((a, b) => b.n - a.n || b.zeit.localeCompare(a.zeit)).slice(0, 12);
   $('vorschlaege').innerHTML = vor.length ? `<div class="unterlabel">Schnell hinzufügen</div><div class="chips">${vor.map((v) => `<button class="chip" data-vorschlag="${esc(v.text)}">${icon('plus', 13, 2.6)}${esc(v.text)}</button>`).join('')}</div>` : '';
 }
-function einkaufAendern(fn, msg) {
-  aendere('einkauf.json', fn, msg).catch(() => {});
+function einkaufAendern(op, msg) {
+  aendereOp('einkauf.json', { liste: 'artikel', ...op }, msg).catch(() => {});
   renderEinkauf();
   badges();
 }
 function artikelNeu(texte) {
   const neu = texte.map((text) => ({ id: uid('e'), text, status: 'offen', zeit: isoZeit(new Date()), erledigt: null }));
-  einkaufAendern((d) => { const ids = new Set(d.artikel.map((a) => a.id)); d.artikel.push(...neu.filter((a) => !ids.has(a.id))); return d; }, 'Einkauf hinzugefügt');
+  einkaufAendern({ neu }, 'Einkauf hinzugefügt');
 }
 $('einkauf-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -311,17 +304,15 @@ $('einkauf-liste').addEventListener('click', (e) => {
   const zeile = e.target.closest('[data-id]');
   if (!zeile) return;
   const id = zeile.dataset.id;
-  const zeit = isoZeit(new Date());
-  einkaufAendern((d) => {
-    const a = d.artikel.find((x) => x.id === id);
-    if (a) { a.status = a.status === 'erledigt' ? 'offen' : 'erledigt'; a.erledigt = a.status === 'erledigt' ? zeit : null; }
-    return d;
-  }, 'Einkauf abgehakt');
+  const jetzt = (F['einkauf.json']?.artikel || []).find((x) => x.id === id);
+  if (!jetzt) return;
+  const status = jetzt.status === 'erledigt' ? 'offen' : 'erledigt';
+  einkaufAendern({ ids: [id], felder: { status, erledigt: status === 'erledigt' ? isoZeit(new Date()) : null } }, 'Einkauf abgehakt');
 });
 $('einkauf-aufraeumen').onclick = () => {
   const ids = (F['einkauf.json']?.artikel || []).filter((a) => a.status === 'erledigt').map((a) => a.id);
-  einkaufAendern((d) => { d.artikel.forEach((a) => { if (ids.includes(a.id)) a.status = 'archiv'; }); return d; }, 'Erledigte entfernt');
-  toast(`${ids.length} entfernt`, { label: 'Rückgängig', fn: () => einkaufAendern((d) => { d.artikel.forEach((a) => { if (ids.includes(a.id)) a.status = 'erledigt'; }); return d; }, 'Wiederhergestellt') });
+  einkaufAendern({ ids, felder: { status: 'archiv' } }, 'Erledigte entfernt');
+  toast(`${ids.length} entfernt`, { label: 'Rückgängig', fn: () => einkaufAendern({ ids, felder: { status: 'erledigt' } }, 'Wiederhergestellt') });
 };
 
 /* ---------- Finanzen ---------- */
@@ -481,10 +472,12 @@ $('kosten-sichern').onclick = () => {
   const datum = tag === heute() ? isoZeit(jetzt) : `${tag}T12:00:00`;
   if (kostenId) {
     const id = kostenId;
-    aendere('kosten.json', (d) => { const b = d.buchungen.find((x) => x.id === id); if (b) Object.assign(b, { betrag, text, kategorie: wahl, datum: b.datum.slice(0, 10) === tag ? b.datum : datum }); return d; }, 'Ausgabe geändert').catch(() => {});
+    const alt = aktive(F['kosten.json']).find((x) => x.id === id);
+    const neuDatum = alt && alt.datum.slice(0, 10) === tag ? alt.datum : datum;
+    aendereOp('kosten.json', { liste: 'buchungen', ids: [id], felder: { betrag, text, kategorie: wahl, datum: neuDatum } }, 'Ausgabe geändert').catch(() => {});
   } else {
     const b = { id: uid('b'), datum, kategorie: wahl, betrag, text, quelle: 'app' };
-    aendere('kosten.json', (d) => { if (!d.buchungen.some((x) => x.id === b.id)) d.buchungen.push(b); return d; }, `Ausgabe ${wahl}`).catch(() => {});
+    aendereOp('kosten.json', { liste: 'buchungen', neu: b }, `Ausgabe ${wahl}`).catch(() => {});
     toast(`${euro(betrag)} · ${wahl}`);
   }
   schliesse();
@@ -492,7 +485,7 @@ $('kosten-sichern').onclick = () => {
 };
 $('kosten-loeschen').onclick = () => {
   const id = kostenId;
-  const setze = (v) => { aendere('kosten.json', (d) => { const b = d.buchungen.find((x) => x.id === id); if (b) b.storniert = v; return d; }, v ? 'Ausgabe gelöscht' : 'Ausgabe wiederhergestellt').catch(() => {}); render(); };
+  const setze = (v) => { aendereOp('kosten.json', { liste: 'buchungen', ids: [id], felder: { storniert: v } }, v ? 'Ausgabe gelöscht' : 'Ausgabe wiederhergestellt').catch(() => {}); render(); };
   setze(true);
   schliesse();
   toast('Ausgabe gelöscht', { label: 'Rückgängig', fn: () => setze(false) });
@@ -506,6 +499,7 @@ async function laden(erst = false) {
     $('banner').innerHTML = '';
     if (erst) await routine();
     geladen = true;
+    if (offenNachzureichen()) { const n = await nachholen(); if (n) toast(`${n} ${n === 1 ? 'Änderung' : 'Änderungen'} nachgereicht`); }
   } catch (e) {
     $('banner').innerHTML = e instanceof FehlerToken
       ? `<div class="banner">${icon('aus', 20)}<span>Noch nicht verbunden. <a href="einstellungen.html">Token eintragen</a></span></div>`
@@ -530,4 +524,5 @@ await laden(true);
 wetter();
 starteZyklus(() => laden(), 60);
 starteZyklus(wetter, 900);
+addEventListener('online', () => laden());
 starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);

@@ -25,6 +25,7 @@ export async function ladeDatei(p) {
   if (pending[p]) return F[p];
   const r = await lesen(p);
   F[p] = r ? r.data : structuredClone(STANDARD[p]);
+  for (const e of wsLesen()) if (e.p === p) F[p] = anwenden(e.op)(F[p]);
   if (p === 'einstellungen.json') setzeModule(F[p].module);
   return F[p];
 }
@@ -33,7 +34,7 @@ export async function ladeAlle(pfade) {
 }
 
 // Ändert lokal sofort und schreibt danach in Reihenfolge auf GitHub (bei Konflikt mit frischen Daten neu).
-export function aendere(p, fn, nachricht) {
+export function aendere(p, fn, nachricht, still = false) {
   F[p] = fn(structuredClone(F[p] ?? STANDARD[p]));
   pending[p] = (pending[p] || 0) + 1;
   const job = () => aendern(p, fn, nachricht, structuredClone(STANDARD[p]));
@@ -43,7 +44,7 @@ export function aendere(p, fn, nachricht) {
     (r) => { pending[p]--; if (!pending[p]) F[p] = r.data; if (p === 'einstellungen.json') setzeModule(F[p].module); return r; },
     async (e) => {
       pending[p]--;
-      fehlerMelden(e);
+      if (!still) fehlerMelden(e);
       if (!pending[p]) { try { await ladeDatei(p); } catch { /* offline */ } }
       throw e;
     },
@@ -79,3 +80,63 @@ export async function routine(jetzt = new Date()) {
 export const PANEL_STANDARD = { nachtVon: '23:00', nachtBis: '06:30', bewegung: true, glas: true, hintergrund: 'landschaft', fotoMinuten: 15 };
 export const panelEinst = () => ({ ...PANEL_STANDARD, ...(F['einstellungen.json']?.panel || {}) });
 export const lichtModi = () => F['einstellungen.json']?.licht || [];
+
+/* Offline-Warteschlange: Änderungen als beschreibbare Operationen, die bei Netzproblemen
+   im Browser gespeichert und später nachgereicht werden. Alle Operationen sind idempotent. */
+const WS = 'np-warteschlange';
+function wsLesen() { try { return JSON.parse(localStorage.getItem(WS)) || []; } catch { return []; } }
+function wsSchreiben(l) { try { localStorage.setItem(WS, JSON.stringify(l)); } catch { /* voll oder gesperrt */ } }
+export const offenNachzureichen = () => wsLesen().length;
+
+// op = { liste, neu?: Eintrag oder Liste, ids?: [...], felder?: {...}, weg?: [Feldnamen] }
+export function anwenden(op) {
+  return (d) => {
+    d = d || {};
+    const arr = d[op.liste] || (d[op.liste] = []);
+    if (op.neu) for (const n of [].concat(op.neu)) if (!arr.some((x) => x.id === n.id)) arr.push(n);
+    if (op.ids) {
+      for (const x of arr) {
+        if (!op.ids.includes(x.id)) continue;
+        Object.assign(x, op.felder || {});
+        for (const k of op.weg || []) delete x[k];
+      }
+    }
+    return d;
+  };
+}
+
+let offlineMelden = () => {};
+export function beiOffline(fn) { offlineMelden = fn; }
+
+export function aendereOp(p, op, nachricht) {
+  const eintrag = { id: Math.random().toString(36).slice(2), p, op, nachricht };
+  wsSchreiben([...wsLesen(), eintrag]);
+  return aendere(p, anwenden(op), nachricht, true).then(
+    (r) => { wsSchreiben(wsLesen().filter((e) => e.id !== eintrag.id)); return r; },
+    (e) => {
+      if (e instanceof FehlerToken) { wsSchreiben(wsLesen().filter((x) => x.id !== eintrag.id)); fehlerMelden(e); } else offlineMelden(wsLesen().length);
+      throw e;
+    },
+  );
+}
+
+let holtNach = false;
+export async function nachholen() {
+  if (holtNach) return 0;
+  holtNach = true;
+  let erledigt = 0;
+  try {
+    for (const e of wsLesen()) {
+      try {
+        const r = await aendern(e.p, anwenden(e.op), e.nachricht, structuredClone(STANDARD[e.p]));
+        if (!pending[e.p]) F[e.p] = r.data;
+        wsSchreiben(wsLesen().filter((x) => x.id !== e.id));
+        erledigt++;
+      } catch (err) {
+        if (err instanceof FehlerToken) break;
+        break;
+      }
+    }
+  } finally { holtNach = false; }
+  return erledigt;
+}

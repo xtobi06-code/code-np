@@ -1,4 +1,4 @@
-import { F, ladeAlle, aendere, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
+import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
 import { offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
@@ -24,6 +24,7 @@ let tagGeladen = '';
 let fotoListe = '';
 
 beiFehler((e) => toast(e instanceof FehlerToken ? e.message : 'Speichern fehlgeschlagen'));
+beiOffline(() => toast('Offline gespeichert, wird nachgereicht'));
 $('einst').innerHTML = icon('regler', 18);
 $('ic-studium').innerHTML = icon('kappe', 16, 2.2);
 $('ic-studium').style.setProperty('--ic', 'linear-gradient(160deg, #4aa8ff, #1f6fe0)');
@@ -141,11 +142,7 @@ $('app').addEventListener('click', (e) => {
   row.classList.add('fertig');
   const zeit = new Date().toISOString();
   setTimeout(() => {
-    const setze = (offen) => aendere('aufgaben.json', (d) => {
-      const a = d.aufgaben.find((x) => x.id === id);
-      if (a) { a.status = offen ? 'offen' : 'erledigt'; a.erledigt = offen ? null : zeit; }
-      return d;
-    }, offen ? 'Rückgängig' : 'Abgehakt').catch(() => {});
+    const setze = (offen) => aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: offen ? 'offen' : 'erledigt', erledigt: offen ? null : zeit } }, offen ? 'Rückgängig' : 'Abgehakt').catch(() => {});
     setze(false);
     listen();
     const a = F['aufgaben.json'].aufgaben.find((x) => x.id === id);
@@ -372,6 +369,7 @@ async function laden(dateien = DATEIEN) {
     $('hinweis').style.display = 'none';
     const h = isoDate(new Date());
     if (tagGeladen !== h || dateien === DATEIEN) { tagGeladen = h; await routine(); }
+    if (offenNachzureichen()) await nachholen();
     status(null);
   } catch (e) {
     if (e instanceof FehlerToken) { $('hinweis').style.display = 'grid'; status('bad', 'Nicht verbunden'); return; }

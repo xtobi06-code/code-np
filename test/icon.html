@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../shared/scene.css">
+<style>[hidden]{display:none!important}html,body{margin:0;width:540px;height:540px;overflow:hidden}#a{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,#5ab0ff 0%,#1a73f0 55%,#0b4fd1 100%)}
+#a .k{width:300px;height:300px;border-radius:72px;background:rgba(255,255,255,.18);box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 20px 40px rgba(0,0,0,.18);display:grid;place-items:center;color:#fff}
+.szene .sz-schleier{background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.15))}</style></head><body>
+<div id="s"></div><div id="a" hidden><div class="k" id="k"></div></div>
+<script type="module">
+import { erstelleSzene } from '../shared/scene.js';
+import { icon } from '../shared/icons.js';
+const art = new URLSearchParams(location.search).get('art');
+if (art === 'alltag') { document.getElementById('a').hidden = false; document.getElementById('k').innerHTML = icon('liste', 180, 2.2); }
+else { const sz = erstelleSzene(document.getElementById('s')); sz.aktualisiere(new Date('2026-11-03T16:45:00+01:00'), 0); }
+</script></body></html>
