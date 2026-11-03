@@ -1,4 +1,5 @@
-main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 24px) 16px calc(120px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+html { min-height: calc(100% + 1px); }
+main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 32px) 16px calc(120px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
 .tint { position: fixed; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none; transition: background .6s;
   background: radial-gradient(120% 100% at 15% 0%, var(--tint-farbe, rgba(0,122,255,.16)), transparent 70%); }
 
@@ -15,7 +16,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .wetterzeile b { color: var(--text); font-weight: 600; }
 
 /* Tab-Leiste */
-.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 6px; width: min(calc(100% - 40px), 420px);
+.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) * .45); width: min(calc(100% - 40px), 420px);
   display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px; border-radius: 999px; z-index: 30; }
 .tab-pille { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: rgba(120, 120, 128, .16);
   transform: translateX(calc(100% * var(--i, 0))); transition: transform .4s cubic-bezier(.3, .9, .3, 1.1); }
@@ -89,7 +90,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 /* Sheets */
 .schleier { position: fixed; inset: 0; background: rgba(0, 0, 0, .28); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .schleier.an { opacity: 1; pointer-events: auto; }
-.blatt { position: fixed; left: 8px; right: 8px; bottom: 8px; max-width: 620px; margin: 0 auto; border-radius: 36px; padding: 8px 18px 20px; z-index: 41;
+.blatt { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom) * .3); max-width: 620px; margin: 0 auto; border-radius: 36px; padding: 8px 18px 20px; z-index: 41;
   transform: translateY(calc(100% + 60px)); visibility: hidden; transition: transform .42s cubic-bezier(.25, .9, .3, 1), visibility 0s .42s; max-height: calc(100% - env(safe-area-inset-top) - 30px); overflow-y: auto;
   --glas: rgba(242, 242, 247, .9); }
 @media all { .blatt { --glas: rgba(28, 28, 30, .9); } }

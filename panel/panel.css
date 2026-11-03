@@ -49,6 +49,9 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 .leben { flex: 1.05; }
 .liste { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .liste::-webkit-scrollbar { display: none; }
+.liste { -webkit-mask-image: linear-gradient(#000 calc(100% - 2.6rem), transparent); mask-image: linear-gradient(#000 calc(100% - 2.6rem), transparent); }
+.liste::after { content: ""; display: block; height: 2.4rem; }
+.liste:has(.leer)::after { display: none; }
 .task.erledigt { opacity: .5; }
 .task.erledigt .titel { text-decoration: line-through; }
 .task.erledigt .kreis { background: var(--c); color: #fff; }
@@ -157,7 +160,7 @@ body.nachtzeit .ruhe-datum, body.nachtzeit .ruhe-info { color: rgba(255, 59, 48,
 body.nachtzeit .ruhe-uhr { opacity: .85; }
 body.nachtmodus .punkte, body.nachtmodus .ecke { opacity: 0; pointer-events: none; }
 body.nacht-wach .nacht-schleier { opacity: .55; }
-body.nacht-wach .ruhe { color: #fff; }
+body.nachtzeit.auf-uhr .nacht-schleier { opacity: .96; }
 
 /* Bedienleiste */
 .punkte { position: fixed; left: 50%; bottom: .75rem; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem; padding: .62rem .85rem; border-radius: 999px; z-index: 3; transition: opacity 1s; }

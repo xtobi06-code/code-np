@@ -45,6 +45,7 @@ function zeige(i, sofort = false) {
   if (sofort) { s.style.transition = 'none'; requestAnimationFrame(() => { s.style.transition = ''; }); }
   s.style.transform = `translate3d(${-seite * 33.3333}%, 0, 0)`;
   document.querySelectorAll('#punkte button').forEach((b, k) => b.classList.toggle('an', k === seite));
+  document.body.classList.toggle('auf-uhr', seite === 0);
 }
 let start = null;
 let gewischt = 0;
