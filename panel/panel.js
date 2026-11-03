@@ -399,3 +399,28 @@ addEventListener('resize', () => { if (innerWidth !== breite) { breite = innerWi
   ['resize', 'orientationchange', 'pageshow', 'scroll'].forEach((n) => addEventListener(n, zurueck, { passive: true }));
   document.addEventListener('visibilitychange', zurueck);
 }
+
+// Diagnose: dreimal schnell auf das Datum tippen zeigt Fenstermaße.
+{
+  let taps = [];
+  let box = null;
+  const info = () => {
+    const v = window.visualViewport || {};
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99;background:rgba(0,0,0,.85);color:#fff;font:16px/1.5 ui-monospace,monospace;padding:16px 20px;border-radius:14px;white-space:pre';
+    const sa = document.createElement('div');
+    sa.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(sa);
+    const c = getComputedStyle(sa);
+    t.textContent = `inner ${innerWidth}x${innerHeight}\nscreen ${screen.width}x${screen.height}\nvv ${Math.round(v.width)}x${Math.round(v.height)} off ${Math.round(v.offsetLeft)},${Math.round(v.offsetTop)} page ${Math.round(v.pageLeft)},${Math.round(v.pageTop)}\nscroll ${scrollX},${scrollY}\nsafe T${c.paddingTop} R${c.paddingRight} B${c.paddingBottom} L${c.paddingLeft}\nstandalone ${navigator.standalone}`;
+    sa.remove();
+    t.onclick = () => t.remove();
+    document.body.appendChild(t);
+  };
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#datum')) return;
+    const n = Date.now();
+    taps = taps.filter((x) => n - x < 900).concat(n);
+    if (taps.length >= 3) { taps = []; info(); }
+  });
+}
