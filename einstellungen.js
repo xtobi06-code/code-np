@@ -32,7 +32,9 @@ function kopie() {
 }
 
 const schalter = (pfad, an) => `<label class="schalter"><input type="checkbox" data-p="${pfad}" ${an ? 'checked' : ''}><span></span></label>`;
-const knoepfe = (id, zweit) => `<div class="knopfzeile"><button class="knopf" data-sichern="${id}">Sichern</button>${zweit || ''}</div><div class="meldung" id="m-${id}"></div>`;
+const knoepfe = () => '';
+const GRIFF = '<svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 9h14M5 15h14"/></svg>';
+const griff = (k, i) => `<span class="griff" data-sort="${k}.${i}" aria-label="Verschieben">${GRIFF}</span>`;
 
 function verbindungHtml() {
   const c = config();
@@ -54,14 +56,14 @@ function finanzenHtml() {
     <div class="zeile"><span class="lbl">Monatsbudget</span><input class="zahl" inputmode="decimal" data-p="e.monatsbudget" value="${esc(S.e.monatsbudget ?? '')}"> €</div>
   </div>
   <div class="gruppe-titel"><span>Budget pro Kategorie</span><span>Summe ${euro(summe)}</span></div>
-  <div class="gruppe">${S.kats.map((k, i) => `<div class="zeile" style="--einzug:58px">
+  <div class="gruppe">${S.kats.map((k, i) => `<div class="zeile" data-reihe="kats" style="--einzug:58px">
     <span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span><span class="lbl">${esc(k.name)}</span>
-    <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €</div>`).join('')}</div>
+    <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €${griff('kats', i)}</div>`).join('')}</div>
   <div class="gruppe-titel">Dauerkosten (am Monatsersten gebucht)</div>
-  <div class="gruppe">${S.dauer.map((d, i) => `<div class="zeile" style="flex-wrap:wrap;row-gap:4px">
+  <div class="gruppe">${S.dauer.map((d, i) => `<div class="zeile" data-reihe="dauer" style="flex-wrap:wrap;row-gap:4px">
     ${schalter(`dauer.${i}.aktiv`, d.aktiv !== false)}
     <input class="links" style="flex:1 1 120px" data-p="dauer.${i}.name" value="${esc(d.name)}" placeholder="Name, z. B. Mobilfunk">
-    <button class="x" data-weg="dauer.${i}" aria-label="Entfernen">${icon('x', 18)}</button>
+    <button class="x" data-weg="dauer.${i}" aria-label="Entfernen">${icon('x', 18)}</button>${griff('dauer', i)}
     <div style="flex-basis:100%;display:flex;align-items:center;gap:10px;padding-left:63px;font-size:15px">
       <span style="flex:1"></span><input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> € pro Monat</div></div>`).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="dauer">${'Dauerkosten hinzufügen'}</button></div></div>
@@ -73,17 +75,17 @@ function lichtHtml() {
   return `<div class="gruppe-titel"><span>Licht-Modi</span><span style="font-weight:400;color:var(--t2)">${S.licht.filter((l) => l.favorit).length} Favoriten</span></div>
   <div class="gruppe">${S.licht.map((l, i) => {
     const auf = lichtOffen.has(i);
-    return `<div class="regel">
+    return `<div class="regel" data-reihe="licht">
     <div class="kopf" data-licht-auf="${i}"><span class="symbol" style="background:${esc(l.farbe || '#FFD60A')};color:#111">${icon(l.symbol || 'lampe', 17, 2.2)}</span>
       <span class="name">${esc(l.name || 'Ohne Namen')}<small>${esc(l.kurzbefehl || 'Kurzbefehl fehlt')}</small></span>
       <button class="x" style="color:${l.favorit ? '#ffcc00' : 'var(--t3)'}" data-fav="${i}" aria-label="Favorit">${icon('stern', 21, l.favorit ? 2.6 : 2)}</button>
-      <span style="color:var(--t3)">${icon(auf ? 'hoch' : 'runter', 18)}</span></div>
+      <span style="color:var(--t3)">${icon(auf ? 'hoch' : 'runter', 18)}</span>${griff('licht', i)}</div>
     ${auf ? `<div class="koerper">
       <div class="reihe"><span>Name</span><input style="flex:1" data-p="licht.${i}.name" value="${esc(l.name)}" placeholder="Name"></div>
       <div class="reihe"><span>Kurzbefehl</span><input style="flex:1" data-p="licht.${i}.kurzbefehl" value="${esc(l.kurzbefehl || '')}" placeholder="Exakter Name" autocapitalize="none" autocorrect="off"></div>
       <div class="reihe"><span>Farbe</span><input type="color" class="farbe" data-p="licht.${i}.farbe" value="${esc(l.farbe || '#FFD60A')}"></div>
       <div class="reihe"><span>Symbol</span><div class="symbole">${LICHT_SYMBOLE.map((s) => `<button class="${s === l.symbol ? 'an' : ''}" data-symbol="${i}:${s}">${icon(s, 18)}</button>`).join('')}</div></div>
-      <div class="reihe"><button class="textknopf" style="padding:0" data-hoch="licht.${i}">Nach oben schieben</button><button class="textknopf" style="padding:0 0 0 18px;color:var(--bad)" data-weg="licht.${i}">Entfernen</button></div>
+      <div class="reihe"><button class="textknopf" style="padding:0;color:var(--bad)" data-weg="licht.${i}">Entfernen</button></div>
     </div>` : ''}</div>`;
   }).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="licht">Modus hinzufügen</button></div></div>
@@ -98,11 +100,12 @@ function semesterHtml() {
     <div class="zeile"><span class="lbl">Ende</span><input type="date" class="datum" data-p="e.semester.bis" value="${esc(S.e.semester?.bis || '')}"></div>
   </div>
   <div class="gruppe-titel">Pausen und freie Tage</div>
-  <div class="gruppe">${S.pausen.map((p, i) => `<div class="zeile">
-    <input class="links" style="flex:1" data-p="pausen.${i}.name" value="${esc(p.name)}" placeholder="Name">
-    <input type="date" class="datum" style="width:118px" data-p="pausen.${i}.von" value="${esc(p.von)}">
-    <input type="date" class="datum" style="width:118px" data-p="pausen.${i}.bis" value="${esc(p.bis)}">
-    <button class="x" data-weg="pausen.${i}" aria-label="Entfernen">${icon('x', 18)}</button></div>`).join('')}
+  <div class="gruppe">${S.pausen.map((p, i) => `<div class="zeile" style="flex-wrap:wrap;row-gap:8px">
+    <input class="links" style="flex:1 1 140px" data-p="pausen.${i}.name" value="${esc(p.name)}" placeholder="Name">
+    <button class="x" data-weg="pausen.${i}" aria-label="Entfernen">${icon('x', 18)}</button>
+    <div style="flex-basis:100%;display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--t2)">
+      <input type="date" class="datum" style="width:128px" data-p="pausen.${i}.von" value="${esc(p.von)}"> bis
+      <input type="date" class="datum" style="width:128px" data-p="pausen.${i}.bis" value="${esc(p.bis)}"></div></div>`).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="pausen">Pause hinzufügen</button></div></div>
   <p class="fuss">In Pausen und außerhalb der Vorlesungszeit entstehen keine Aufgaben. Für einen einzelnen Feiertag Beginn und Ende gleich setzen.</p>
   ${knoepfe('semester')}`;
@@ -158,11 +161,11 @@ function kleidungHtml() {
 
 function moduleHtml() {
   return `<div class="gruppe-titel">Module</div>
-  <div class="gruppe">${S.module.map((m, i) => `<div class="zeile">
+  <div class="gruppe">${S.module.map((m, i) => `<div class="zeile" data-reihe="module">
     <input type="color" class="farbe" data-p="module.${i}.farbe" value="${esc(m.farbe)}">
     <input class="links" style="width:64px;font-weight:600" data-p="module.${i}.k" value="${esc(m.k)}" autocapitalize="characters">
     <input class="links" style="flex:1" data-p="module.${i}.name" value="${esc(m.name)}" placeholder="Voller Name">
-    <button class="x" data-weg="module.${i}" aria-label="Entfernen">${icon('x', 18)}</button></div>`).join('')}
+    <button class="x" data-weg="module.${i}" aria-label="Entfernen">${icon('x', 18)}</button>${griff('module', i)}</div>`).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="module">Modul hinzufügen</button></div></div>
   <p class="fuss">Die Farben stammen aus deinem TUM-Stundenplan. Das Kürzel muss zu den Regeln passen.</p>
   ${knoepfe('module')}`;
@@ -331,14 +334,10 @@ document.addEventListener('click', async (e) => {
     offen.has(t.dataset.auf) ? offen.delete(t.dataset.auf) : offen.add(t.dataset.auf);
     return zeichne();
   }
-  if (t.dataset.sichern) sichern(t.dataset.sichern);
-});
+  });
 
 async function sichern(was) {
-  const m = $(`m-${was}`);
-  m.className = 'meldung';
-  m.textContent = 'Speichere …';
-  try {
+  {
     if (was === 'finanzen') {
       await aendere('einstellungen.json', (d) => ({ ...d, monatsbudget: S.e.monatsbudget }), 'Budget geändert');
       await aendere('kategorien.json', (d) => ({ ...d, kategorien: S.kats }), 'Kategorien geändert');
@@ -372,13 +371,119 @@ async function sichern(was) {
       const stufen = S.stufen.filter((s) => s.text).sort((a, b) => a.bis - b.bis);
       await aendere('einstellungen.json', (d) => ({ ...d, kleidung: { ...(d.kleidung || {}), stufen, regenSchwelle: Number(S.e.kleidung?.regenSchwelle ?? 40) } }), 'Kleidung geändert');
     }
-    m.className = 'meldung ok';
-    m.textContent = 'Gespeichert';
-  } catch (err) {
-    m.className = 'meldung bad';
-    m.textContent = err.message || 'Speichern fehlgeschlagen';
   }
 }
+
+/* Gemeinsamer Sichern-Knopf */
+const teile = () => ({
+  finanzen: JSON.stringify([S.e.monatsbudget, S.kats, S.dauer]),
+  licht: JSON.stringify(S.licht),
+  panel: JSON.stringify([S.e.name, S.panel]),
+  module: JSON.stringify(S.module),
+  semester: JSON.stringify([S.e.semester, S.pausen]),
+  regeln: JSON.stringify(S.regeln),
+  kleidung: JSON.stringify([S.stufen, S.e.kleidung]),
+});
+let stand = null;
+const geaendert = () => (S && stand ? Object.keys(stand).filter((k) => stand[k] !== teile()[k]) : []);
+function sichernZeigen() {
+  const b = $('sichern');
+  b.hidden = !S;
+  b.classList.toggle('an', geaendert().length > 0);
+}
+let speichert = false;
+async function alleSichern() {
+  if (speichert) return false;
+  const liste = geaendert();
+  if (!liste.length) return true;
+  speichert = true;
+  const b = $('sichern');
+  b.textContent = 'Speichere …';
+  try {
+    for (const k of liste) await sichern(k);
+    stand = teile();
+    b.textContent = 'Gespeichert';
+    setTimeout(() => { b.textContent = 'Sichern'; sichernZeigen(); }, 1400);
+    speichert = false;
+    sichernZeigen();
+    return true;
+  } catch (err) {
+    b.textContent = 'Fehler';
+    b.title = err.message || '';
+    setTimeout(() => { b.textContent = 'Sichern'; sichernZeigen(); }, 2500);
+    speichert = false;
+    return false;
+  }
+}
+$('sichern').addEventListener('click', alleSichern);
+['input', 'change', 'click', 'pointerup'].forEach((t) => document.addEventListener(t, () => setTimeout(sichernZeigen, 0)));
+
+/* Zurück: bei ungesicherten Änderungen nachfragen */
+$('zurueck').addEventListener('click', (e) => {
+  if (!geaendert().length) return;
+  e.preventDefault();
+  const ziel = $('zurueck').href;
+  const bl = document.createElement('div');
+  bl.className = 'frage';
+  bl.innerHTML = `<div class="frage-box"><b>Änderungen sichern?</b><p>Du hast Änderungen gemacht, die noch nicht gesichert sind.</p>
+    <button class="knopf" data-f="sichern">Sichern</button><button class="knopf zwei" data-f="weg" style="color:var(--bad)">Verwerfen</button><button class="knopf zwei" data-f="bleib">Abbrechen</button></div>`;
+  document.body.appendChild(bl);
+  bl.addEventListener('click', async (ev) => {
+    const w = ev.target.closest('[data-f]')?.dataset.f;
+    if (!w) return;
+    if (w === 'bleib') return bl.remove();
+    if (w === 'weg') return (location.href = ziel);
+    ev.target.textContent = 'Speichere …';
+    if (await alleSichern()) location.href = ziel; else { bl.remove(); }
+  });
+});
+
+/* Reihenfolge per Ziehen am Griff */
+document.addEventListener('pointerdown', (e) => {
+  const g = e.target.closest('.griff');
+  if (!g || !S) return;
+  e.preventDefault();
+  const [k, is] = g.dataset.sort.split('.');
+  const i = Number(is);
+  const reihe = g.closest('[data-reihe]');
+  const alle = [...reihe.parentElement.children].filter((c) => c.dataset.reihe === k);
+  const rects = alle.map((c) => c.getBoundingClientRect());
+  const h = rects[i].height;
+  const mitte = rects.map((r) => r.top + r.height / 2);
+  const y0 = e.clientY;
+  let j = i;
+  g.setPointerCapture(e.pointerId);
+  reihe.classList.add('zieht');
+  alle.forEach((c) => { if (c !== reihe) c.style.transition = 'transform .15s'; });
+  const bewegt = (ev) => {
+    const dy = ev.clientY - y0;
+    reihe.style.transform = `translateY(${dy}px)`;
+    const mz = mitte[i] + dy;
+    j = i;
+    alle.forEach((_, n) => { if (n > i && mz > mitte[n]) j = n; });
+    if (j === i) alle.forEach((_, n) => { if (n < i && mz < mitte[n]) { j = n; } });
+    if (j < i) j = alle.findIndex((_, n) => n < i && mz < mitte[n]);
+    alle.forEach((c, n) => {
+      if (c === reihe) return;
+      c.style.transform = j > i && n > i && n <= j ? `translateY(${-h}px)` : j < i && n >= j && n < i ? `translateY(${h}px)` : '';
+    });
+  };
+  const fertig = () => {
+    g.removeEventListener('pointermove', bewegt);
+    g.removeEventListener('pointerup', fertig);
+    g.removeEventListener('pointercancel', fertig);
+    if (j !== i) {
+      const [x] = S[k].splice(i, 1);
+      S[k].splice(j, 0, x);
+      if (k === 'licht') lichtOffen.clear();
+    }
+    zeichne();
+    sichernZeigen();
+  };
+  g.addEventListener('pointermove', bewegt);
+  g.addEventListener('pointerup', fertig);
+  g.addEventListener('pointercancel', fertig);
+});
 
 async function verbinden() {
   saveConfig({ owner: $('c-owner').value.trim(), repo: $('c-repo').value.trim(), token: $('c-token').value.trim() });
@@ -400,8 +505,10 @@ async function laden() {
   try {
     await ladeAlle(DATEIEN);
     S = kopie();
+    stand = teile();
   } catch { S = null; }
   zeichne();
+  sichernZeigen();
   if (S) $('m-verbindung').textContent = '';
 }
 

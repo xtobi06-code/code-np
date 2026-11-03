@@ -35,6 +35,7 @@ $('tb-todos').innerHTML = `${icon('liste', 24, 1.9)}To-dos`;
 $('tb-einkauf').innerHTML = `${icon('wagen', 24, 1.9)}Einkauf`;
 $('tb-finanzen').innerHTML = `${icon('geldbeutel', 24, 1.9)}Finanzen`;
 $('plus-todo').innerHTML = icon('plus', 13, 2.6);
+$('todo-senden').innerHTML = icon('hoch', 18, 2.8);
 $('plus-einkauf').innerHTML = icon('plus', 13, 2.6);
 document.querySelectorAll('[data-zu]').forEach((b) => { b.innerHTML = icon('x', 18, 2.4); });
 $('kosten-sichern').innerHTML = icon('check', 19, 2.8);
@@ -210,19 +211,30 @@ zub.addEventListener('focusout', (e) => {
   if (e.target.dataset.datum !== 'neu') return;
   setTimeout(() => { zubehoer(); $('todo-input').focus(); }, 80);
 });
-$('todo-input').addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const titel = e.target.value.trim();
+function todoSenden() {
+  const feld = $('todo-input');
+  const titel = feld.value.trim();
   if (!titel) return;
-  e.target.value = '';
+  feld.value = '';
   const neu = { id: uid('a'), liste: S.todoListe, titel, status: 'offen', erstellt: isoZeit(new Date()), erledigt: null };
   if (S.todoListe === 'studium' && S.neuModul) neu.modul = S.neuModul;
   if (S.neuFaellig) neu.faellig = S.neuFaellig;
   S.neuFaellig = '';
+  S.neuModul = '';
+  sendeKnopf();
+  zubehoer();
   aendereOp('aufgaben.json', { liste: 'aufgaben', neu }, 'Neue Aufgabe').catch(() => {});
   renderTodos();
   badges();
+}
+function sendeKnopf() { $('todo-senden').hidden = !$('todo-input').value.trim(); }
+$('todo-input').addEventListener('input', sendeKnopf);
+$('todo-senden').addEventListener('pointerdown', (e) => e.preventDefault());
+$('todo-senden').addEventListener('click', todoSenden);
+$('todo-input').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  todoSenden();
 });
 
 // Aufgabe bearbeiten

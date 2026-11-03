@@ -13,6 +13,13 @@
   main { padding: calc(env(safe-area-inset-top) + 62px) 16px calc(40px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
   .leiste { position: fixed; inset: 0 0 auto 0; height: 0; z-index: 30; }
   .zurueck { position: fixed; z-index: 30; top: calc(env(safe-area-inset-top) + 8px); left: 16px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text); background: var(--glas); -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%); border: .5px solid var(--glas-rand); box-shadow: var(--glas-schatten), inset 0 1px 0 rgba(255,255,255,.14); }
+  .sichern-knopf { position: fixed; z-index: 30; top: calc(env(safe-area-inset-top) + 8px); right: 16px; height: 44px; padding: 0 20px; border-radius: 22px; border: .5px solid var(--glas-rand); background: var(--glas); backdrop-filter: blur(20px) saturate(170%); -webkit-backdrop-filter: blur(20px) saturate(170%); color: var(--t3); font-weight: 600; font-size: 16px; transition: background .2s, color .2s; }
+  .sichern-knopf.an { background: var(--accent); color: #fff; border-color: transparent; }
+  .griff { flex: none; display: grid; place-items: center; width: 34px; height: 34px; margin: -6px -8px -6px 0; color: var(--t3); touch-action: none; cursor: grab; }
+  [data-reihe].zieht { position: relative; z-index: 5; background: var(--karte2); box-shadow: 0 8px 24px rgba(0,0,0,.5); border-radius: 12px; }
+  .frage { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.5); display: grid; place-items: center; padding: 24px; }
+  .frage-box { width: 100%; max-width: 320px; background: var(--karte); border-radius: 24px; padding: 22px; display: grid; gap: 10px; text-align: center; }
+  .frage-box p { margin: 0 0 6px; color: var(--t2); font-size: 15px; }
   .zurueck .ic { transform: rotate(180deg); }
   h1 { font-size: 34px; font-weight: 700; margin: 0 0 18px; }
   .zeile label, .zeile .lbl { flex: 1; min-width: 0; }
@@ -75,7 +82,7 @@
 <body>
 <div class="tint"></div>
 <main>
-  <div class="leiste"><a class="zurueck" href="./" id="zurueck"></a></div>
+  <div class="leiste"><a class="zurueck" href="./" id="zurueck"></a><button class="sichern-knopf" id="sichern" hidden>Sichern</button></div>
   <h1>Einstellungen</h1>
   <div id="inhalt"></div>
 </main>
