@@ -163,7 +163,7 @@ function kachel(m, i, gross) {
   return `<a class="kachel${an ? ' an' : ''}" data-licht="${i}" href="${esc(shortcutUrl(m.kurzbefehl || m.name))}">
     <span class="k-ic" style="--c:${c};--glow:${hexRgba(c, 0.45)}">${icon(m.symbol || 'lampe', 22, 2.2)}</span>
     ${gross && m.favorit ? `<span class="stern-mark">${icon('stern', 16, 2.2)}</span>` : ''}
-    <span class="k-text"><span class="k-name">${esc(m.name)}</span>${an ? `<span class="k-sub">Zuletzt um ${esc(zuletzt.zeit)}</span>` : ''}</span></a>`;
+    <span class="k-text"><span class="k-name">${esc(m.name)}</span></span></a>`;
 }
 function licht() {
   const modi = lichtModi();
@@ -173,7 +173,7 @@ function licht() {
   $('n-licht').textContent = modi.length > 4 ? `(${modi.length})` : '';
   $('licht-alle').innerHTML = modi.map((m, i) => kachel(m, i, true)).join('');
   const z = LS.get('np-licht', null);
-  $('licht-zuletzt').textContent = z ? `Zuletzt: ${z.name} um ${z.zeit}` : 'Tippe auf eine Szene';
+  $('licht-zuletzt').textContent = '';
 }
 document.addEventListener('click', (e) => {
   const k = e.target.closest('[data-licht]');

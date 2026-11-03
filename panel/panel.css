@@ -61,7 +61,7 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 .badge::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .2; z-index: -1; }
 .meta { font-size: .875rem; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .task.heute .meta { color: #fff; font-weight: 650; background: rgba(255,255,255,.17); padding: .12rem .5rem; border-radius: 999px; }
-.task.ueber .meta { color: #ff8f87; font-weight: 600; }
+.task.ueber .meta { color: var(--t2); }
 .mehr { font-size: .875rem; color: var(--t2); padding: .35rem 0 0 2.5rem; }
 .leer { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; color: var(--t2); font-size: 1rem; }
 .leer .ic { width: 2.4rem; height: 2.4rem; color: #34c759; }

@@ -1,8 +1,6 @@
 main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 14px) 16px calc(120px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
 .tint { position: fixed; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none; transition: background .6s;
   background: radial-gradient(120% 100% at 15% 0%, var(--tint-farbe, rgba(0,122,255,.16)), transparent 70%); }
-.kante-oben { position: fixed; top: -24px; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 90px); z-index: 20; pointer-events: none; opacity: 0; transition: opacity .25s;
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); -webkit-mask-image: linear-gradient(#000 45%, transparent); mask-image: linear-gradient(#000 45%, transparent); }
 
 .kante-oben.an { opacity: 1; }
 .nav-knoepfe { position: fixed; top: calc(env(safe-area-inset-top) + 12px); right: max(16px, calc(50% - 304px)); display: flex; gap: 10px; z-index: 25; }
@@ -18,7 +16,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .wetterzeile b { color: var(--text); font-weight: 600; }
 
 /* Tab-Leiste */
-.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(calc(100% - 40px), 420px);
+.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) * .4 + 4px); width: min(calc(100% - 40px), 420px);
   display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px; border-radius: 999px; z-index: 30; }
 .tab-pille { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: rgba(120, 120, 128, .16);
   transform: translateX(calc(100% * var(--i, 0))); transition: transform .4s cubic-bezier(.3, .9, .3, 1.1); }
@@ -43,7 +41,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .task .titel .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task.erl .titel .txt { color: var(--t2); text-decoration: line-through; }
 .task .neben.heute { color: var(--cd); font-weight: 650; }
-.task .neben.ueber { color: var(--bad); font-weight: 600; }
+.task .neben.ueber { color: var(--t2); }
 @media (prefers-color-scheme: dark) { .task .neben.heute { color: var(--c); } }
 .leer { text-align: center; color: var(--t2); padding: 30px 16px 26px; font-size: 15px; }
 .leer .ic { margin: 0 auto 10px; color: var(--ok); width: 40px; height: 40px; }

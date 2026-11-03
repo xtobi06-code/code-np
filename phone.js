@@ -527,10 +527,3 @@ starteZyklus(wetter, 900);
 addEventListener('online', () => laden());
 starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);
 
-// Kopfzeilen-Unschärfe nur, wenn der Inhalt darunter wirklich scrollt.
-{
-  const kante = document.querySelector('.kante-oben');
-  const pruefe = () => kante && kante.classList.toggle('an', scrollY > 6);
-  addEventListener('scroll', pruefe, { passive: true });
-  pruefe();
-}
