@@ -139,3 +139,6 @@ body.glasapp { --bg: #02040b; --karte: rgba(16, 22, 40, .42); --karte2: rgba(255
 
 .senden { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; display: grid; place-items: center; margin-left: 8px; }
 .senden[hidden] { display: none; }
+
+/* Kopfzeilen-Knöpfe ohne Backdrop-Blur: der verschmiert am oberen Rand */
+.rund.glas:not(.akzent) { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(34, 38, 56, .96); }
