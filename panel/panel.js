@@ -111,8 +111,8 @@ function takt() {
   if (!nacht && seite !== 1 && Date.now() - letzteBeruehrung > 90000) zeige(1);
 }
 function pixelVersatz() {
-  const x = Math.round((Math.random() - 0.5) * 10);
-  const y = Math.round(Math.random() * 6);
+  const x = Math.round((Math.random() - 0.5) * 6);
+  const y = Math.round((Math.random() - 0.5) * 4);
   $('app').style.transform = `translate(${x}px, ${y}px)`;
 }
 

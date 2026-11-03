@@ -3,7 +3,7 @@
 /* 1rem = 16px auf dem iPad 8 (1080 × 810), skaliert auf andere Größen */
 html { font-size: min(calc(100vw / 67.5), calc(100vh / 50.625)); }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-html, body { margin: 0; position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #02040b; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+html, body { margin: 0; position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; }
 .ic { display: block; flex: none; }
 [hidden] { display: none !important; }
@@ -145,9 +145,10 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 .stern-mark .ic { width: 1.1rem; height: 1.1rem; }
 
 /* Uhr / StandBy */
+.seite.ruhe { padding: 3.2rem 1.6rem; }
 .ruhe { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; text-shadow: 0 2px 40px rgba(0,0,0,.3); transition: color 1.5s; }
 .ruhe-datum { font-size: 1.75rem; font-weight: 600; color: rgba(255,255,255,.85); }
-.ruhe-uhr { font-family: var(--rounded); font-size: 15.5rem; font-weight: 600; letter-spacing: -.045em; line-height: .95; font-variant-numeric: tabular-nums; margin: .2rem 0 .8rem; }
+.ruhe-uhr { font-family: var(--rounded); font-size: 15.5rem; font-weight: 600; letter-spacing: -.045em; line-height: .95; font-variant-numeric: tabular-nums; margin: .2rem .045em .8rem 0; }
 .ruhe-info { display: flex; gap: 1.6rem; font-size: 1.25rem; font-weight: 500; color: rgba(255,255,255,.85); flex-wrap: wrap; justify-content: center; }
 .ruhe-info span { display: inline-flex; align-items: center; gap: .45rem; }
 .ruhe-info .ic { width: 1.4rem; height: 1.4rem; }
@@ -196,7 +197,7 @@ body.nachtzeit.auf-uhr .nacht-schleier { opacity: .96; }
 
 /* Unterer Rand läuft in Schwarz aus: der Systemrahmen unter dem Fenster ist schwarz, so entsteht keine harte Kante. */
 body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 6rem; z-index: 1; pointer-events: none; background: linear-gradient(#000 0%, rgba(0, 0, 0, .85) 30%, transparent 100%); }
-body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 7rem; z-index: 1; pointer-events: none; background: linear-gradient(transparent, rgba(0, 0, 0, .55) 55%, #000); }
+body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 9rem; z-index: 1; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.013) 8%, rgba(0,0,0,.05) 18%, rgba(0,0,0,.11) 29%, rgba(0,0,0,.19) 40%, rgba(0,0,0,.29) 51%, rgba(0,0,0,.41) 62%, rgba(0,0,0,.55) 73%, rgba(0,0,0,.71) 83%, rgba(0,0,0,.87) 92%, #000 98%); }
 
 /* Einstellungen-Knopf neben dem Datum */
 .einst { position: absolute; top: .1rem; right: .2rem; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,.85); text-decoration: none; z-index: 2; }
