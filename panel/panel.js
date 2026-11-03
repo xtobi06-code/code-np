@@ -14,6 +14,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
 };
 
+let offeneZeile = null;
+let wischZeit = 0;
 const szene = erstelleSzene($('szene'));
 let wetter = null;
 let seite = 0;
@@ -46,7 +48,7 @@ function zeige(i, sofort = false) {
 }
 let start = null;
 let gewischt = 0;
-$('app').addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY }; });
+$('app').addEventListener('pointerdown', (e) => { start = e.target.closest('.task') ? null : { x: e.clientX, y: e.clientY }; });
 $('app').addEventListener('pointerup', (e) => {
   if (!start) return;
   const dx = e.clientX - start.x;
@@ -114,7 +116,7 @@ function zeileHtml(a) {
   const meta = ueber ? (a.faellig ? fmtDM(a.faellig) : kwVon(a) ? metaText(a) : fmtDM(a.datum)) : metaText(a);
   const heute = !ueber && istHeute(a) && meta !== '';
   return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
-    <span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div>`;
+    <button class="loesch" data-loesch aria-label="Löschen">Löschen</button><div class="vorn"><span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div></div>`;
 }
 function einpassen(box, gesamt) {
   const rows = [...box.querySelectorAll('.task')];
@@ -137,6 +139,7 @@ function kuerzlichErledigt(name) {
     .sort((x, y) => y.erledigt.localeCompare(x.erledigt));
 }
 function liste(name) {
+  offeneZeile = null;
   const box = $(name);
   const auf = offene(F['aufgaben.json']?.aufgaben || [], name);
   const erl = kuerzlichErledigt(name);
@@ -150,6 +153,15 @@ $('app').addEventListener('click', (e) => {
   const row = e.target.closest('.task');
   if (!row || row.classList.contains('fertig')) return;
   const id = row.dataset.id;
+  if (e.target.closest('[data-loesch]')) {
+    aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'geloescht' } }, 'Gelöscht').catch(() => {});
+    offeneZeile = null;
+    listen();
+    toast('Aufgabe gelöscht', { label: 'Rückgängig', fn: () => { aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'offen' } }, 'Wiederhergestellt').catch(() => {}); listen(); } }, 6000);
+    return;
+  }
+  if (Date.now() - wischZeit < 350) return;
+  if (offeneZeile) { schliesseZeile(); return; }
   if (row.classList.contains('erledigt')) {
     aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'offen', erledigt: null } }, 'Rückgängig').catch(() => {});
     listen();
@@ -572,3 +584,48 @@ dlg.addEventListener('keydown', (e) => {
 const auffrischen = () => laden(['aufgaben.json', 'einkauf.json', 'einstellungen.json', 'termine.json']).then(hintergrund);
 addEventListener('pageshow', (e) => { if (e.persisted) auffrischen(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') auffrischen(); });
+
+
+/* ---------- Wischen zum Löschen ---------- */
+const BREITE = 5.4 * parseFloat(getComputedStyle(document.documentElement).fontSize) || 96;
+function schliesseZeile() {
+  if (!offeneZeile) return;
+  offeneZeile.classList.remove('auf');
+  offeneZeile.querySelector('.vorn').style.transform = '';
+  offeneZeile = null;
+}
+{
+  let d = null;
+  const rein = (e) => e.target.closest && e.target.closest('.liste .task');
+  document.addEventListener('pointerdown', (e) => {
+    const zeile = rein(e);
+    if (!zeile) { if (offeneZeile && !e.target.closest('[data-loesch]')) schliesseZeile(); return; }
+    if (offeneZeile && offeneZeile !== zeile) schliesseZeile();
+    d = { x: e.clientX, y: e.clientY, zeile, vorn: zeile.querySelector('.vorn'), start: offeneZeile === zeile ? -BREITE : 0, aktiv: false, id: e.pointerId, box: zeile.closest('.liste') };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.aktiv) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; }
+      if (Math.abs(dx) < 10) return;
+      d.aktiv = true;
+      d.zeile.classList.add('zieht');
+      try { d.zeile.setPointerCapture(d.id); } catch { /* egal */ }
+    }
+    d.t = Math.max(-BREITE - 20, Math.min(0, d.start + dx));
+    d.vorn.style.transform = `translateX(${d.t}px)`;
+  });
+  const ende = () => {
+    if (!d) return;
+    const x = d;
+    d = null;
+    if (!x.aktiv) return;
+    wischZeit = Date.now();
+    x.zeile.classList.remove('zieht');
+    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; x.zeile.classList.add('auf'); offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; x.zeile.classList.remove('auf'); if (offeneZeile === x.zeile) offeneZeile = null; }
+  };
+  document.addEventListener('pointerup', ende);
+  document.addEventListener('pointercancel', ende);
+}

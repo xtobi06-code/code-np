@@ -41,7 +41,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .task.erl .titel .txt { color: var(--t2); text-decoration: line-through; }
 .task .neben.heute { color: var(--cd); font-weight: 650; }
 .task .neben.ueber { color: var(--t2); }
-@media (prefers-color-scheme: dark) { .task .neben.heute { color: var(--c); } }
+@media all { .task .neben.heute { color: var(--c); } }
 .leer { text-align: center; color: var(--t2); padding: 30px 16px 26px; font-size: 15px; }
 .leer .ic { margin: 0 auto 10px; color: var(--ok); width: 40px; height: 40px; }
 .leer b { display: block; color: var(--text); font-size: 17px; margin-bottom: 2px; }
@@ -92,7 +92,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .blatt { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 620px; margin: 0 auto; border-radius: 36px; padding: 8px 18px 20px; z-index: 41;
   transform: translateY(calc(100% + 60px)); visibility: hidden; transition: transform .42s cubic-bezier(.25, .9, .3, 1), visibility 0s .42s; max-height: calc(100% - env(safe-area-inset-top) - 30px); overflow-y: auto;
   --glas: rgba(242, 242, 247, .9); }
-@media (prefers-color-scheme: dark) { .blatt { --glas: rgba(28, 28, 30, .9); } }
+@media all { .blatt { --glas: rgba(28, 28, 30, .9); } }
 .blatt.an { transform: none; visibility: visible; transition: transform .42s cubic-bezier(.25, .9, .3, 1), visibility 0s; }
 .blatt .griff { width: 38px; height: 5px; border-radius: 3px; background: var(--t3); margin: 0 auto 8px; opacity: .7; }
 .blatt .kopfzeile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
@@ -113,3 +113,9 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 
 .banner { background: var(--karte); border-radius: 22px; padding: 14px 16px; margin-bottom: 18px; font-size: 15px; display: flex; gap: 10px; align-items: center; box-shadow: var(--schatten); }
 .banner .ic { color: var(--warn); }
+
+/* Wischen zum Löschen */
+.zeile.task { padding: 0; overflow: hidden; }
+.task .vorn { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 9px 18px; width: 100%; box-sizing: border-box; background: var(--karte); position: relative; z-index: 1; transition: transform .28s cubic-bezier(.25,.9,.3,1); touch-action: pan-y; }
+.task.zieht .vorn { transition: none; }
+.task .loesch { position: absolute; top: 0; right: 0; bottom: 0; width: 96px; border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }

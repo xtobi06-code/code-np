@@ -1,4 +1,4 @@
-:root {
+:root { color-scheme: dark;
   color-scheme: light dark;
   --bg: #f2f2f7; --karte: #ffffff; --karte2: #f2f2f7; --text: #000; --t2: #6c6c70; --t3: #b0b0b5;
   --linie: rgba(60, 60, 67, .15); --accent: #007aff; --ok: #34c759; --warn: #ff9500; --bad: #ff3b30;
@@ -6,7 +6,7 @@
   --glas: rgba(255, 255, 255, .72); --glas-rand: rgba(255, 255, 255, .8); --glas-schatten: 0 8px 30px rgba(0, 0, 0, .12), 0 1px 3px rgba(0, 0, 0, .06);
   --rund: 26px; --tint: #007aff;
 }
-@media (prefers-color-scheme: dark) {
+@media all {
   :root {
     --bg: #000; --karte: #1c1c1e; --karte2: #2c2c2e; --text: #fff; --t2: #98989f; --t3: #5a5a5f;
     --linie: rgba(84, 84, 88, .5); --accent: #0a84ff; --ok: #30d158; --warn: #ff9f0a; --bad: #ff453a;
@@ -25,7 +25,7 @@ a { color: var(--accent); text-decoration: none; }
 /* Liquid Glass */
 .glas { background: var(--glas); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
   border: .5px solid var(--glas-rand); box-shadow: var(--glas-schatten), inset 0 1px 0 rgba(255, 255, 255, .45); }
-@media (prefers-color-scheme: dark) { .glas { box-shadow: var(--glas-schatten), inset 0 1px 0 rgba(255, 255, 255, .12); } }
+@media all { .glas { box-shadow: var(--glas-schatten), inset 0 1px 0 rgba(255, 255, 255, .12); } }
 
 .gruppe { background: var(--karte); border-radius: var(--rund); overflow: hidden; margin: 0 0 24px; box-shadow: var(--schatten); }
 .gruppe-titel { font-size: 15px; font-weight: 650; color: var(--text); margin: 0 6px 8px; display: flex; justify-content: space-between; align-items: baseline; letter-spacing: -.01em; }
@@ -44,11 +44,11 @@ a { color: var(--accent); text-decoration: none; }
 .kreis { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--cd, var(--t3)); flex: none; display: grid; place-items: center; color: transparent; background: none; padding: 0; transition: background .2s, transform .15s; }
 .kreis:active { transform: scale(.85); }
 .kreis.an { background: var(--cd, var(--accent)); color: #fff; }
-@media (prefers-color-scheme: dark) { .kreis { border-color: var(--c, var(--t3)); } .kreis.an { background: var(--c, var(--accent)); color: #000; } }
+@media all { .kreis { border-color: var(--c, var(--t3)); } .kreis.an { background: var(--c, var(--accent)); color: #000; } }
 
 .badge { position: relative; z-index: 0; flex: none; display: inline-block; font-size: 12px; font-weight: 750; letter-spacing: .02em; padding: 2px 6px; border-radius: 6px; color: var(--cd); margin-right: 7px; vertical-align: 1px; }
 .badge::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .28; z-index: -1; }
-@media (prefers-color-scheme: dark) { .badge { color: var(--c); } .badge::before { opacity: .22; } }
+@media all { .badge { color: var(--c); } .badge::before { opacity: .22; } }
 
 input.feld { width: 100%; border: 0; background: transparent; outline: none; padding: 0; font-size: 17px; }
 input.feld::placeholder { color: var(--t3); }

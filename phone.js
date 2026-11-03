@@ -17,6 +17,8 @@ const LS = {
 };
 const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', ...LS.get('np-ansicht', {}), offenKat: null, zeigeErledigt: false, neuModul: '', neuFaellig: '' };
 if (!TABS.includes(S.tab)) S.tab = 'todos';
+let offeneZeile = null;
+let wischZeit = 0;
 const merken = () => LS.set('np-ansicht', { tab: S.tab, finAnsicht: S.finAnsicht, zeitraum: S.zeitraum, todoListe: S.todoListe, verlaufKat: S.verlaufKat });
 const heute = () => isoDate(new Date());
 const morgen = () => isoDate(addDays(new Date(), 1));
@@ -109,15 +111,16 @@ function taskHtml(a, erl = false) {
   const heuteTag = !erl && istHeute(a) && (a.faellig || a.regel);
   if (heuteTag) meta = 'Heute';
   if (ueber) meta = a.faellig ? fmtWtDM(a.faellig) : kwVon(a) ? metaText(a) : fmtWtDM(a.datum);
-  return `<div class="zeile task${erl ? ' erl' : ''}" style="${farbStil(farbeVon(a))}" data-id="${esc(a.id)}">
+  return `<div class="zeile task${erl ? ' erl' : ''}" style="${farbStil(farbeVon(a))}" data-id="${esc(a.id)}"><div class="vorn">
     <button class="kreis${erl ? ' an' : ''}" data-aktion="${erl ? 'wieder' : 'erledigt'}" aria-label="${erl ? 'Wiederherstellen' : 'Erledigt'}">${icon('check', 14, 3.2)}</button>
-    <span class="haupt titel" data-aktion="bearbeiten">${titelHtml(a)}</span>${meta ? `<span class="neben${heuteTag ? ' heute' : ''}${ueber ? ' ueber' : ''}">${esc(meta)}</span>` : ''}</div>`;
+    <span class="haupt titel" data-aktion="bearbeiten">${titelHtml(a)}</span>${meta ? `<span class="neben${heuteTag ? ' heute' : ''}${ueber ? ' ueber' : ''}">${esc(meta)}</span>` : ''}</div>${erl ? '' : '<button class="loesch" data-aktion="loeschen">Löschen</button>'}</div>`;
 }
 function gruppe(titel, liste) {
   if (!liste.length) return '';
   return `<div class="gruppe-titel"><span>${titel}</span><span class="zahl">${liste.length}</span></div><div class="gruppe">${liste.map((a) => taskHtml(a)).join('')}</div>`;
 }
 function renderTodos() {
+  offeneZeile = null;
   const alle = F['aufgaben.json']?.aufgaben || [];
   const liste = S.todoListe;
   const auf = offene(alle, liste);
@@ -144,6 +147,15 @@ $('tab-todos').addEventListener('click', (e) => {
   const b = e.target.closest('[data-aktion]');
   if (!b) return;
   const id = b.closest('[data-id]').dataset.id;
+  if (b.dataset.aktion === 'loeschen') {
+    setzeStatus(id, 'geloescht');
+    renderTodos();
+    badges();
+    toast('Gelöscht', { label: 'Rückgängig', fn: () => { setzeStatus(id, 'offen'); renderTodos(); badges(); } });
+    return;
+  }
+  if (Date.now() - wischZeit < 350) return;
+  if (offeneZeile) { schliesseZeile(); return; }
   if (b.dataset.aktion === 'bearbeiten') { aufgabeBlatt(id); return; }
   if (b.dataset.aktion === 'erledigt') {
     b.classList.add('an');
@@ -526,3 +538,49 @@ starteZyklus(wetter, 900);
 addEventListener('online', () => laden());
 starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);
 
+
+
+/* ---------- Wischen zum Löschen ---------- */
+const BREITE = 96;
+function schliesseZeile() {
+  if (!offeneZeile) return;
+  offeneZeile.querySelector('.vorn').style.transform = '';
+  offeneZeile = null;
+}
+{
+  let d = null;
+  const liste = $('todo-liste');
+  liste.addEventListener('pointerdown', (e) => {
+    const vorn = e.target.closest('.vorn');
+    if (!vorn) { schliesseZeile(); return; }
+    const zeile = vorn.parentElement;
+    if (offeneZeile && offeneZeile !== zeile) schliesseZeile();
+    d = { x: e.clientX, y: e.clientY, zeile, vorn, start: offeneZeile === zeile ? -BREITE : 0, aktiv: false };
+  });
+  liste.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.aktiv) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; }
+      if (Math.abs(dx) < 8) return;
+      d.aktiv = true;
+      d.zeile.classList.add('zieht');
+      try { liste.setPointerCapture(e.pointerId); } catch { /* egal */ }
+    }
+    const t = Math.max(-BREITE - 24, Math.min(0, d.start + dx));
+    d.vorn.style.transform = `translateX(${t}px)`;
+    d.t = t;
+  });
+  const ende = () => {
+    if (!d) return;
+    const x = d;
+    d = null;
+    if (!x.aktiv) return;
+    wischZeit = Date.now();
+    x.zeile.classList.remove('zieht');
+    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; if (offeneZeile === x.zeile) offeneZeile = null; }
+  };
+  liste.addEventListener('pointerup', ende);
+  liste.addEventListener('pointercancel', ende);
+}
