@@ -18,7 +18,7 @@ let offeneZeile = null;
 let wischZeit = 0;
 const szene = erstelleSzene($('szene'));
 let wetter = null;
-let seite = 0;
+let seite = 1;
 let letzteBeruehrung = Date.now();
 let wachBis = 0;
 let nacht = false;
@@ -63,7 +63,7 @@ document.addEventListener('pointerdown', () => {
   letzteBeruehrung = Date.now();
   if (nacht) {
     wachBis = Date.now() + 90000;
-    if (!document.body.classList.contains('nacht-wach')) { document.body.classList.add('nacht-wach'); document.body.classList.remove('nachtmodus'); zeige(0); }
+    if (!document.body.classList.contains('nacht-wach')) { document.body.classList.add('nacht-wach'); document.body.classList.remove('nachtmodus'); zeige(1); }
   }
 }, true);
 document.querySelectorAll('[data-seite]').forEach((b) => b.addEventListener('click', () => zeige(Number(b.dataset.seite))));
@@ -94,15 +94,16 @@ function takt() {
     document.body.classList.toggle('nachtmodus', n);
     document.body.classList.remove('nacht-wach');
     szene.bewegung(!n && p.bewegung);
-    zeige(n ? 2 : 0);
+    document.body.classList.toggle('nachtzeit', n);
+    zeige(n ? 0 : 1);
   }
   if (nacht && wachBis && Date.now() > wachBis) {
     wachBis = 0;
     document.body.classList.remove('nacht-wach');
     document.body.classList.add('nachtmodus');
-    zeige(2);
+    zeige(0);
   }
-  if (!nacht && seite !== 0 && Date.now() - letzteBeruehrung > 90000) zeige(0);
+  if (!nacht && seite !== 1 && Date.now() - letzteBeruehrung > 90000) zeige(1);
 }
 function pixelVersatz() {
   const x = Math.round((Math.random() - 0.5) * 10);
@@ -205,7 +206,7 @@ document.addEventListener('click', (e) => {
   if (!k) return;
   const m = lichtModi()[Number(k.dataset.licht)];
   if (!m) return;
-  setTimeout(() => { if (seite === 1) zeige(0); }, 300);
+  setTimeout(() => { if (seite === 2) zeige(1); }, 300);
 });
 
 /* ---------- Wetter ---------- */
@@ -337,7 +338,7 @@ function stapelWeiter() {
   document.querySelectorAll('#stapel-punkte i').forEach((k, i) => k.classList.toggle('an', i === stapelIndex));
 }
 $('stapel').addEventListener('click', () => { stapelPause = Date.now() + 45000; stapelWeiter(); });
-setInterval(() => { if (panelEinst().stapelAuto === true && Date.now() > stapelPause && !nacht && seite === 0) stapelWeiter(); }, 14000);
+setInterval(() => { if (panelEinst().stapelAuto === true && Date.now() > stapelPause && !nacht && seite === 1) stapelWeiter(); }, 14000);
 
 /* ---------- Ruhe-Zifferblatt ---------- */
 function ruheInfo() {
@@ -407,7 +408,7 @@ async function laden(dateien = DATEIEN) {
   alles();
 }
 
-zeige(0, true);
+zeige(1, true);
 takt();
 szenenTakt();
 setInterval(takt, 1000);

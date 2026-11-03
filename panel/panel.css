@@ -152,9 +152,9 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 /* Nacht */
 .nacht-schleier { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 1; transition: opacity 2s; }
 body.nachtmodus .nacht-schleier { opacity: .9; }
-body.nachtmodus .ruhe { color: #ff3b30; text-shadow: none; }
-body.nachtmodus .ruhe-datum, body.nachtmodus .ruhe-info { color: rgba(255, 59, 48, .7); }
-body.nachtmodus .ruhe-uhr { opacity: .85; }
+body.nachtzeit .ruhe { color: #ff3b30; text-shadow: none; }
+body.nachtzeit .ruhe-datum, body.nachtzeit .ruhe-info { color: rgba(255, 59, 48, .7); }
+body.nachtzeit .ruhe-uhr { opacity: .85; }
 body.nachtmodus .punkte, body.nachtmodus .ecke { opacity: 0; pointer-events: none; }
 body.nacht-wach .nacht-schleier { opacity: .55; }
 body.nacht-wach .ruhe { color: #fff; }
@@ -192,7 +192,7 @@ body.nacht-wach .ruhe { color: #fff; }
 }
 
 /* Unterer Rand läuft in Schwarz aus: der Systemrahmen unter dem Fenster ist schwarz, so entsteht keine harte Kante. */
-body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 4.5rem; z-index: 1; pointer-events: none; background: linear-gradient(rgba(0, 0, 0, .8), transparent); }
+body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 6rem; z-index: 1; pointer-events: none; background: linear-gradient(#000 0%, rgba(0, 0, 0, .85) 30%, transparent 100%); }
 body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 7rem; z-index: 1; pointer-events: none; background: linear-gradient(transparent, rgba(0, 0, 0, .55) 55%, #000); }
 
 /* Einstellungen-Knopf neben dem Datum */

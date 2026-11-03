@@ -61,7 +61,7 @@ input.feld::placeholder { color: var(--t3); }
 .chip.an { background: var(--c, var(--accent)); color: #fff; }
 .chip .ic { width: 15px; height: 15px; }
 
-#toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px) scale(.96); opacity: 0; pointer-events: none;
+#toast { position: fixed; left: 50%; bottom: 82px; transform: translate(-50%, 20px) scale(.96); opacity: 0; pointer-events: none;
   border-radius: 999px; padding: 8px 8px 8px 18px; display: flex; gap: 12px; align-items: center; font-size: 15px; font-weight: 500;
   transition: transform .3s cubic-bezier(.3, .9, .3, 1.1), opacity .25s; z-index: 60; max-width: calc(100% - 32px); white-space: nowrap;
   background: var(--glas); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); border: .5px solid var(--glas-rand); box-shadow: var(--glas-schatten); }

@@ -9,6 +9,7 @@ const $ = (id) => document.getElementById(id);
 const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'einkauf.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
 const TABS = ['todos', 'einkauf', 'finanzen'];
 const TITEL = { finanzen: 'Finanzen', einkauf: 'Einkauf', todos: 'To-dos' };
+const TAB_FARBE = { todos: '#0a84ff', einkauf: '#ff9f0a', finanzen: '#30d158' };
 const TINT = { todos: 'rgba(0, 122, 255, .17)', einkauf: 'rgba(255, 149, 0, .17)', finanzen: 'rgba(52, 199, 89, .17)' };
 
 const LS = {
@@ -54,6 +55,7 @@ function zeigeTab() {
   $('tabbar').style.setProperty('--i', TABS.indexOf(S.tab));
   $('titel').textContent = TITEL[S.tab];
   document.documentElement.style.setProperty('--tint-farbe', TINT[S.tab]);
+  document.documentElement.style.setProperty('--tab-farbe', TAB_FARBE[S.tab]);
   $('neu').setAttribute('aria-label', S.tab === 'finanzen' ? 'Ausgabe hinzufügen' : S.tab === 'einkauf' ? 'Artikel hinzufügen' : 'Aufgabe hinzufügen');
   segmenteSetzen();
   $('fin-uebersicht').hidden = S.finAnsicht !== 'uebersicht';
