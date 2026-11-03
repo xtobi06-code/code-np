@@ -2,6 +2,8 @@ import { F, ladeAlle, aendere, aendereOp, nachholen, beiOffline, offenNachzureic
 import { kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
+import { erstelleSzene } from './shared/scene.js';
+import { panelEinst } from './shared/core.js';
 import { icon, wetterSymbol } from './shared/icons.js';
 import { headerText, esc, euro, euro0, uid, isoZeit, isoDate, fmtDM, fmtWtDM, parseBetrag, MON, addDays, dunkler } from './shared/util.js';
 
@@ -524,6 +526,8 @@ async function laden(erst = false) {
 async function wetter() {
   try {
     const w = await holeWetter(F['einstellungen.json']);
+    wetterCode = w.code || 0;
+    szeneTakt();
     const e = w.empfehlung;
     $('wetter').innerHTML = `${icon(wetterSymbol(w.code, !w.tag), 17, 2)}<b>${w.temperatur}°</b>${e ? `<span>· ${w.morgen ? 'Morgen: ' : ''}${esc(e.kleidung)}${e.schirm ? ', Schirm' : ''}</span>` : ''}`;
   } catch { $('wetter').innerHTML = ''; }
@@ -546,6 +550,7 @@ starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render()
 const BREITE = 96;
 function schliesseZeile() {
   if (!offeneZeile) return;
+  offeneZeile.classList.remove('auf');
   offeneZeile.querySelector('.vorn').style.transform = '';
   offeneZeile = null;
 }
@@ -581,8 +586,44 @@ function schliesseZeile() {
     if (!x.aktiv) return;
     wischZeit = Date.now();
     x.zeile.classList.remove('zieht');
-    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; if (offeneZeile === x.zeile) offeneZeile = null; }
+    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; x.zeile.classList.add('auf'); offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; x.zeile.classList.remove('auf'); if (offeneZeile === x.zeile) offeneZeile = null; }
   };
   liste.addEventListener('pointerup', ende);
   liste.addEventListener('pointercancel', ende);
+}
+
+
+/* ---------- Hintergrund: gleiche Szene wie am Panel, aber ruhig ---------- */
+let wetterCode = 0;
+const szene = erstelleSzene(document.getElementById('szene'));
+szene.bewegung(false);
+function szeneTakt() {
+  const st = panelEinst().hintergrund;
+  szene.setzeStil(st === 'fotos' ? 'landschaft' : st);
+  szene.aktualisiere(new Date(), wetterCode);
+}
+szeneTakt();
+starteZyklus(szeneTakt, 120);
+
+/* ---------- Diagnose: dreimal auf das Datum tippen ---------- */
+{
+  let taps = [];
+  document.getElementById('datum').addEventListener('click', () => {
+    const n = Date.now();
+    taps = taps.filter((x) => n - x < 900).concat(n);
+    if (taps.length < 3) return;
+    taps = [];
+    const v = window.visualViewport || {};
+    const sa = document.createElement('div');
+    sa.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0';
+    document.body.appendChild(sa);
+    const c = getComputedStyle(sa);
+    const tb = document.getElementById('tabbar').getBoundingClientRect();
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:rgba(0,0,0,.9);color:#fff;font:14px/1.5 ui-monospace,monospace;padding:14px 18px;border-radius:14px;white-space:pre';
+    t.textContent = `inner ${innerWidth}x${innerHeight}\nscreen ${screen.width}x${screen.height}\nvv ${Math.round(v.width)}x${Math.round(v.height)} off ${Math.round(v.offsetTop)}\nscroll ${scrollY} doc ${document.documentElement.scrollHeight}\nsafe T${c.paddingTop} B${c.paddingBottom}\ntabbar bottom ${Math.round(tb.bottom)} (inner-${Math.round(innerHeight - tb.bottom)})`;
+    sa.remove();
+    t.onclick = () => t.remove();
+    document.body.appendChild(t);
+  });
 }
