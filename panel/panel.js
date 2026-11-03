@@ -104,7 +104,7 @@ function takt() {
 }
 function pixelVersatz() {
   const x = Math.round((Math.random() - 0.5) * 10);
-  const y = Math.round((Math.random() - 0.5) * 8);
+  const y = Math.round(Math.random() * 6);
   $('app').style.transform = `translate(${x}px, ${y}px)`;
 }
 
@@ -130,18 +130,31 @@ function einpassen(box, gesamt) {
   rows.slice(sichtbar).forEach((r) => r.remove());
   if (sichtbar < gesamt) box.insertAdjacentHTML('beforeend', `<div class="mehr">+ ${gesamt - sichtbar} weitere</div>`);
 }
+function kuerzlichErledigt(name) {
+  const grenze = Date.now() - 48 * 3600 * 1000;
+  return (F['aufgaben.json']?.aufgaben || [])
+    .filter((a) => a.liste === name && a.status === 'erledigt' && a.erledigt && !a.erledigt.endsWith('T12:00:00') && new Date(a.erledigt).getTime() >= grenze)
+    .sort((x, y) => y.erledigt.localeCompare(x.erledigt));
+}
 function liste(name) {
   const box = $(name);
   const auf = offene(F['aufgaben.json']?.aufgaben || [], name);
+  const erl = kuerzlichErledigt(name);
   $(`n-${name}`).textContent = auf.length ? String(auf.length) : '';
-  if (!auf.length) { box.innerHTML = `<div class="leer">${icon('check', 38, 2.4)}<span>Alles erledigt</span></div>`; return; }
-  box.innerHTML = auf.map(zeileHtml).join('');
-  einpassen(box, auf.length);
+  if (!auf.length && !erl.length) { box.innerHTML = `<div class="leer">${icon('check', 38, 2.4)}<span>Alles erledigt</span></div>`; return; }
+  const alt = box.scrollTop;
+  box.innerHTML = auf.map(zeileHtml).join('') + erl.map((a) => zeileHtml(a).replace('class="task', 'class="task erledigt')).join('');
+  box.scrollTop = alt;
 }
 $('app').addEventListener('click', (e) => {
   const row = e.target.closest('.task');
   if (!row || row.classList.contains('fertig')) return;
   const id = row.dataset.id;
+  if (row.classList.contains('erledigt')) {
+    aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'offen', erledigt: null } }, 'Rückgängig').catch(() => {});
+    listen();
+    return;
+  }
   row.classList.add('fertig');
   const zeit = new Date().toISOString();
   setTimeout(() => {
@@ -489,10 +502,9 @@ function einkaufArtikel() { return (F['einkauf.json']?.artikel || []).filter((a)
 function einkaufVorschau() {
   const offen = einkaufArtikel().filter((a) => a.status === 'offen').sort((x, y) => (x.zeit || '').localeCompare(y.zeit || ''));
   $('n-einkauf').textContent = offen.length ? String(offen.length) : '';
-  const max = 3;
   $('einkauf-vorschau').innerHTML = offen.length
-    ? offen.slice(0, max).map((a) => `<span>${esc(a.text)}</span>`).join('') + (offen.length > max ? `<span class="leise">+ ${offen.length - max} weitere</span>` : '')
-    : '<span class="leise">Liste ist leer</span>';
+    ? `<p>${offen.map((a) => esc(a.text)).join('<i>,</i> ')}</p>`
+    : '<p class="leise">Liste ist leer</p>';
 }
 function einkaufDialog() {
   const offen = einkaufArtikel().filter((a) => a.status === 'offen').sort((x, y) => (x.zeit || '').localeCompare(y.zeit || ''));
