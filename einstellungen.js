@@ -425,12 +425,12 @@ $('zurueck').addEventListener('click', (e) => {
   const ziel = $('zurueck').href;
   const bl = document.createElement('div');
   bl.className = 'frage';
-  bl.innerHTML = `<div class="frage-box"><b>Änderungen sichern?</b><p>Du hast Änderungen gemacht, die noch nicht gesichert sind.</p>
-    <button class="knopf" data-f="sichern">Sichern</button><button class="knopf zwei" data-f="weg" style="color:var(--bad)">Verwerfen</button><button class="knopf zwei" data-f="bleib">Abbrechen</button></div>`;
+  bl.innerHTML = `<div class="frage-box"><button class="frage-zu" data-f="bleib" aria-label="Schließen">${icon('x', 18, 2.4)}</button><b>Änderungen sichern?</b><p>Du hast Änderungen gemacht, die noch nicht gesichert sind.</p>
+    <button class="knopf" data-f="sichern">Sichern</button><button class="knopf leicht" data-f="weg">Verwerfen</button></div>`;
   document.body.appendChild(bl);
   bl.addEventListener('click', async (ev) => {
     const w = ev.target.closest('[data-f]')?.dataset.f;
-    if (!w) return;
+    if (!w) { if (ev.target === bl) bl.remove(); return; }
     if (w === 'bleib') return bl.remove();
     if (w === 'weg') return (location.href = ziel);
     ev.target.textContent = 'Speichere …';

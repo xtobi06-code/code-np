@@ -19,6 +19,9 @@
   [data-reihe].zieht { position: relative; z-index: 5; background: var(--karte2); box-shadow: 0 8px 24px rgba(0,0,0,.5); border-radius: 12px; }
   .frage { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.5); display: grid; place-items: center; padding: 24px; }
   .frage-box { width: 100%; max-width: 320px; background: var(--karte); border-radius: 24px; padding: 22px; display: grid; gap: 10px; text-align: center; }
+  .frage-box { position: relative; }
+  .frage-zu { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: var(--t2); display: grid; place-items: center; padding: 0; }
+  .knopf.leicht { background: rgba(255,255,255,.05); border: .5px solid rgba(255,255,255,.18); color: var(--bad); }
   .frage-box p { margin: 0 0 6px; color: var(--t2); font-size: 15px; }
   .zurueck .ic { transform: rotate(180deg); }
   h1 { font-size: 34px; font-weight: 700; margin: 0 0 18px; }
