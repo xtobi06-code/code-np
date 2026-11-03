@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Panel-Test">
+<title>Panel-Test</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f2f2f7; --card:#fff; --text:#1c1c1e; --muted:#6e6e73; --accent:#0a7aff; --line:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --card:#1c1c1e; --text:#fff; --muted:#98989d; --line:#38383a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:max(16px, env(safe-area-inset-top)) 16px 32px; background:var(--bg); color:var(--text); font:16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 16px; font-size:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+  .card { background:var(--card); border-radius:14px; padding:14px 16px; }
+  h2 { font-size:17px; margin:0 0 8px; }
+  p { margin:0 0 8px; font-size:14px; color:var(--muted); }
+  .out { font-size:15px; color:var(--text); margin-top:8px; min-height:1.4em; white-space:pre-wrap; }
+  .btn { display:block; width:100%; text-align:center; text-decoration:none; border:none; background:var(--accent); color:#fff; font:inherit; font-weight:600; padding:13px; border-radius:12px; margin-top:8px; }
+  .btn.alt { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  input { width:100%; font:inherit; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+  .clock { font-size:34px; font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Panel-Test</h1>
+<p class="sub">Test für das iPad-Wandpanel. Auf dieser Seite sind keine privaten Daten.</p>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>1. Umgebung</h2>
+    <div class="out" id="env">…</div>
+    <div class="clock" id="clock">--:--:--</div>
+    <p>Die Uhr zeigt, ob die Seite im Hintergrund eingefroren wird.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Kurzbefehl auslösen</h2>
+    <p>Name des Kurzbefehls (genau so wie in der Kurzbefehle-App):</p>
+    <input id="sc" value="Abend" autocapitalize="none" autocorrect="off">
+    <a class="btn" id="run1" href="#">Direkt ausführen</a>
+    <a class="btn alt" id="run2" href="#">Ausführen mit Rücksprung</a>
+    <p style="margin-top:10px">Beobachte: Kommt eine Nachfrage? Läuft der Kurzbefehl? Kehrt das iPad danach zu dieser Seite zurück?</p>
+  </div>
+
+  <div class="card">
+    <h2>3. Wetter abrufen</h2>
+    <p>Open-Meteo, Garching.</p>
+    <button class="btn" id="wx">Wetter laden</button>
+    <div class="out" id="wxout"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. Govee aus dem Browser</h2>
+    <p>Prüft nur, ob der Browser die Govee-Cloud erreichen darf (ohne echten Schlüssel).</p>
+    <button class="btn" id="gv">Govee prüfen</button>
+    <div class="out" id="gvout"></div>
+  </div>
+
+  <div class="card">
+    <h2>5. Display wach halten</h2>
+    <p>Unterstützt dieses iPad die Wake-Lock-Funktion?</p>
+    <button class="btn" id="wl">Wach halten testen</button>
+    <div class="out" id="wlout"></div>
+  </div>
+
+</div>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+
+  function env() {
+    var standalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    var w = window.innerWidth, h = window.innerHeight;
+    $("env").textContent =
+      "Fenster: " + w + " × " + h + " (" + (w / h).toFixed(2) + ":1)\n" +
+      "Als App vom Home-Bildschirm gestartet: " + (standalone ? "Ja" : "Nein") + "\n" +
+      "Pixeldichte: " + window.devicePixelRatio;
+  }
+  env();
+  window.addEventListener("resize", env);
+
+  function tick() {
+    var d = new Date();
+    $("clock").textContent = d.toLocaleTimeString("de-DE");
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  function links() {
+    var name = encodeURIComponent($("sc").value.trim());
+    $("run1").href = "shortcuts://run-shortcut?name=" + name;
+    $("run2").href = "shortcuts://x-callback-url/run-shortcut?name=" + name +
+      "&x-success=" + encodeURIComponent(location.href) +
+      "&x-cancel=" + encodeURIComponent(location.href) +
+      "&x-error=" + encodeURIComponent(location.href);
+  }
+  links();
+  $("sc").addEventListener("input", links);
+
+  $("wx").addEventListener("click", function () {
+    $("wxout").textContent = "Lade …";
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=48.25&longitude=11.65&current=temperature_2m,weather_code&timezone=Europe%2FBerlin")
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        $("wxout").textContent = "Funktioniert: " + j.current.temperature_2m + " °C (Wettercode " + j.current.weather_code + ")";
+      })
+      .catch(function (e) { $("wxout").textContent = "Fehlgeschlagen: " + e; });
+  });
+
+  $("gv").addEventListener("click", function () {
+    $("gvout").textContent = "Prüfe …";
+    fetch("https://openapi.api.govee.com/router/api/v1/user/devices", { headers: { "Govee-API-Key": "test" } })
+      .then(function (r) {
+        $("gvout").textContent = "Erreichbar, Antwortstatus " + r.status + ". Der Browser darf die Govee-Cloud also aufrufen (Status 401 oder 403 ist hier zu erwarten).";
+      })
+      .catch(function (e) {
+        $("gvout").textContent = "Blockiert oder nicht erreichbar (" + e + "). Der direkte Aufruf aus dem Browser funktioniert vermutlich nicht.";
+      });
+  });
+
+  var lock = null;
+  $("wl").addEventListener("click", function () {
+    if (!("wakeLock" in navigator)) {
+      $("wlout").textContent = "Nicht unterstützt. Auto-Sperre auf „Nie“ stellen (Einstellungen → Anzeige & Helligkeit).";
+      return;
+    }
+    navigator.wakeLock.request("screen").then(function (l) {
+      lock = l;
+      $("wlout").textContent = "Aktiv. Das Display sollte jetzt nicht mehr dimmen, solange diese Seite offen ist.";
+      l.addEventListener("release", function () { $("wlout").textContent = "Wieder freigegeben."; });
+    }).catch(function (e) { $("wlout").textContent = "Fehlgeschlagen: " + e; });
+  });
+</script>
+</body>
+</html>
