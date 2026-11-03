@@ -62,9 +62,11 @@ function zufall(seed) {
 
 const W = 1600;
 const H = 1000;
-function kette(r, basis, amp, baeume) {
+function kette(r, basis, amp, baeume, spitz) {
   const wellen = Array.from({ length: 5 }, (_, i) => ({ f: ((0.55 + r() * 0.9) * (i + 1) * Math.PI * 2) / W, p: r() * Math.PI * 2, a: amp / (i * 1.7 + 1) }));
-  const hoehe = (x) => basis - wellen.reduce((s, w) => s + w.a * (0.5 + 0.5 * Math.sin(w.f * x + w.p)), 0);
+  const hoehe = spitz
+    ? (x) => basis - wellen.reduce((s, w) => s + w.a * (1 - Math.abs(Math.sin(w.f * x * 0.6 + w.p))), 0)
+    : (x) => basis - wellen.reduce((s, w) => s + w.a * (0.5 + 0.5 * Math.sin(w.f * x + w.p)), 0);
   const pkt = [];
   if (!baeume) {
     for (let x = -20; x <= W + 20; x += 8) pkt.push([x, hoehe(x)]);
@@ -88,6 +90,15 @@ const EBENEN = [
   { basis: 830, amp: 85, mix: 0.72, baeume: [10, 22] },
   { basis: 935, amp: 75, mix: 0.92, baeume: [22, 48] },
 ];
+export const STILE = {
+  landschaft: { name: 'Bayerischer Wald', ebenen: EBENEN, nebel: true },
+  gebirge: { name: 'Hochgebirge', spitz: true, nebel: true, seed: 42, ebenen: [
+    { basis: 470, amp: 230, mix: 0.1 }, { basis: 590, amp: 200, mix: 0.3 }, { basis: 720, amp: 170, mix: 0.52 },
+    { basis: 830, amp: 130, mix: 0.74 }, { basis: 930, amp: 100, mix: 0.93 }] },
+  duenen: { name: 'Hügel', nebel: false, seed: 5, ebenen: [
+    { basis: 660, amp: 90, mix: 0.2 }, { basis: 740, amp: 80, mix: 0.45 }, { basis: 830, amp: 70, mix: 0.7 }, { basis: 920, amp: 60, mix: 0.92 }] },
+  aurora: { name: 'Aurora', aurora: true, ebenen: [] },
+};
 const NEBEL = [{ nach: 0, top: 53, hoehe: 14, dauer: 300, deck: 0.5 }, { nach: 2, top: 64, hoehe: 15, dauer: 220, deck: 0.42 }, { nach: 3, top: 76, hoehe: 16, dauer: 160, deck: 0.32 }];
 
 function nebelBild() {
@@ -105,24 +116,32 @@ function nebelBild() {
 export function erstelleSzene(root) {
   const r = zufall(1979);
   const sterne = Array.from({ length: 140 }, () => `<circle cx="${(r() * W).toFixed(0)}" cy="${(r() * 600).toFixed(0)}" r="${(0.5 + r() * r() * 1.6).toFixed(2)}" fill="#fff" opacity="${(0.35 + r() * 0.65).toFixed(2)}"/>`).join('');
-  const pfade = EBENEN.map((e) => kette(r, e.basis, e.amp, e.baeume));
+  const waldPfade = EBENEN.map((e) => kette(r, e.basis, e.amp, e.baeume));
   const nb = nebelBild();
-  let html = `<div class="sz-himmel"></div>
-    <svg class="sz-ebene sz-sterne" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice">${sterne}</svg>
-    <div class="sz-sonne"><i></i></div>`;
-  EBENEN.forEach((e, i) => {
-    html += `<svg class="sz-ebene" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice"><path d="${pfade[i]}"/></svg>`;
-    NEBEL.filter((n) => n.nach === i).forEach((n) => {
-      html += `<div class="sz-nebel" style="top:${n.top}%;height:${n.hoehe}%;--deck:${n.deck}"><div style="background:${nb};animation-duration:${n.dauer}s"></div></div>`;
+  let stil = STILE.landschaft;
+  const landHtml = (st) => {
+    const pf = st === STILE.landschaft ? waldPfade : st.ebenen.map((e, i) => kette(zufall(st.seed + i), e.basis, e.amp, e.baeume, st.spitz));
+    let h = '';
+    st.ebenen.forEach((e, i) => {
+      h += `<svg class="sz-ebene" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice"><path d="${pf[i]}"/></svg>`;
+      if (st.nebel) NEBEL.filter((n) => n.nach === i).forEach((n) => {
+        h += `<div class="sz-nebel" style="top:${n.top}%;height:${n.hoehe}%;--deck:${n.deck}"><div style="background:${nb};animation-duration:${n.dauer}s"></div></div>`;
+      });
     });
-  });
-  html += '<div class="sz-regen"><div></div></div><div class="sz-schnee"><div></div></div><div class="sz-foto"><img alt=""><img alt=""></div><div class="sz-schleier"></div>';
+    if (st.aurora) h += '<div class="sz-aurora"><i></i><i></i><i></i></div>';
+    return h;
+  };
+  const html = `<div class="sz-himmel"></div>
+    <svg class="sz-ebene sz-sterne" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice">${sterne}</svg>
+    <div class="sz-sonne"><i></i></div><div class="sz-land">${landHtml(stil)}</div>
+    <div class="sz-regen"><div></div></div><div class="sz-schnee"><div></div></div><div class="sz-foto"><img alt=""><img alt=""></div><div class="sz-schleier"></div>`;
   root.innerHTML = html;
   root.classList.add('szene');
   const himmel = root.querySelector('.sz-himmel');
   const sonne = root.querySelector('.sz-sonne');
   const sternSvg = root.querySelector('.sz-sterne');
-  const ebenen = [...root.querySelectorAll('.sz-ebene:not(.sz-sterne) path')];
+  let ebenen = [...root.querySelectorAll('.sz-land .sz-ebene path')];
+  let letzte = [null, 0];
   const fotoBox = root.querySelector('.sz-foto');
   const bilder = [...fotoBox.querySelectorAll('img')];
   let fotos = [];
@@ -138,7 +157,7 @@ export function erstelleSzene(root) {
     sternSvg.style.opacity = p.sterne.toFixed(2);
     const ferne = mischen(mischen(p.mitte, p.horizont, 0.35), p.nebel, 0.2);
     ebenen.forEach((pf, i) => {
-      pf.style.fill = mischen(ferne, p.dunkel, EBENEN[i].mix);
+      pf.style.fill = mischen(ferne, p.dunkel, stil.ebenen[i].mix);
     });
     const x = Math.max(4, Math.min(96, ((az - 90) / 180) * 100));
     const y = 62 - (Math.max(-8, el) / 32) * 50;
@@ -152,7 +171,16 @@ export function erstelleSzene(root) {
     root.classList.toggle('regnet', p.regen);
     root.classList.toggle('schneit', p.schnee);
     root.classList.toggle('nacht', el < -6);
+    letzte = [jetzt, code];
     return { el, p };
+  }
+  function setzeStil(name) {
+    const neu = STILE[name] || STILE.landschaft;
+    if (neu === stil) return;
+    stil = neu;
+    root.querySelector('.sz-land').innerHTML = landHtml(stil);
+    ebenen = [...root.querySelectorAll('.sz-land .sz-ebene path')];
+    aktualisiere(letzte[0] || new Date(), letzte[1]);
   }
 
   function zeigeFoto() {
@@ -174,5 +202,5 @@ export function erstelleSzene(root) {
   }
   function bewegung(an) { root.classList.toggle('still', !an); }
 
-  return { aktualisiere, setzeFotos, bewegung };
+  return { aktualisiere, setzeFotos, bewegung, setzeStil };
 }

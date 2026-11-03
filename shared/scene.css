@@ -1,5 +1,13 @@
 .szene { position: fixed; inset: 0; overflow: hidden; z-index: 0; background: #02040b; pointer-events: none; }
 .szene > * { position: absolute; inset: 0; }
+.sz-land > * { position: absolute; inset: 0; }
+.sz-aurora i { position: absolute; inset: auto; width: 90vmax; height: 60vmax; border-radius: 50%; filter: none; will-change: transform; }
+.sz-aurora i:nth-child(1) { left: -25%; top: 5%; background: radial-gradient(closest-side, var(--glanz), transparent); opacity: .55; animation: sz-drift1 70s ease-in-out infinite alternate; }
+.sz-aurora i:nth-child(2) { right: -30%; top: 30%; background: radial-gradient(closest-side, var(--nebel), transparent); opacity: .5; animation: sz-drift2 90s ease-in-out infinite alternate; }
+.sz-aurora i:nth-child(3) { left: 10%; bottom: -35%; background: radial-gradient(closest-side, var(--glanz), transparent); opacity: .35; animation: sz-drift1 110s ease-in-out infinite alternate-reverse; }
+@keyframes sz-drift1 { to { transform: translate3d(18%, 12%, 0) scale(1.15); } }
+@keyframes sz-drift2 { to { transform: translate3d(-20%, -10%, 0) scale(.9); } }
+.szene.still .sz-aurora i { animation-play-state: paused; }
 .sz-himmel { transition: background 60s linear; }
 .sz-ebene { width: 100%; height: 100%; }
 .sz-ebene path { transition: fill 60s linear; }

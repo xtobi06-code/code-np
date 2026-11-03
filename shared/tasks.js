@@ -81,13 +81,15 @@ export function erzeugen(e, regeln, vorhanden, jetzt = new Date()) {
       const ab = addDays(montag(v), 7 * (r.ab?.wochen ?? -1) + ((r.ab?.tag ?? 4) - 1));
       if (ab > h) continue;
       const vs = isoDate(v);
-      add({ id: `${r.id}-${vs}`, regel: r.id, modul: r.modul, typ: r.typ, titel: `${r.modul} ${r.typ} · VO ${fmtDM(vs)}`, datum: vs, ab: isoDate(ab) });
+      add({ id: `${r.id}-${vs}`, regel: r.id, modul: r.modul, typ: r.typ, titel: `${r.modul} ${r.typ}`, datum: vs, ab: isoDate(ab) });
     }
   }
   return neu;
 }
 
 const sk = (a) => a.faellig || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
+// Kalenderwoche einer Aufgabe: bei Wochenaufgaben und Videos (nach Datum der Vorlesung).
+export const kwVon = (a) => a.kw || (a.typ === 'Videos' && a.datum ? kwKey(parseDate(a.datum)) : null);
 export function istHeute(a, jetzt = new Date()) {
   const h = isoDate(jetzt);
   if (a.faellig) return a.faellig === h;
@@ -95,7 +97,7 @@ export function istHeute(a, jetzt = new Date()) {
 }
 export function ueberfaellig(a, jetzt = new Date()) {
   if (a.faellig) return a.faellig < isoDate(jetzt);
-  if (a.kw) return a.kw < kwKey(jetzt); // Wochenaufgaben sind bis Wochenende fällig
+  if (kwVon(a)) return kwVon(a) < kwKey(jetzt); // Wochenaufgaben sind bis Wochenende fällig
   return !!(a.regel && a.datum) && a.datum < isoDate(jetzt);
 }
 export function offene(aufgaben, liste, jetzt = new Date()) {
@@ -114,15 +116,14 @@ export function metaText(a, jetzt = new Date()) {
     if (a.faellig === isoDate(addDays(jetzt, 1))) return 'Morgen';
     return (a.faellig < h ? 'Überfällig · ' : '') + fmtWtDM(a.faellig);
   }
-  if (a.kw) return kwLabel(a.kw);
-  if (a.typ === 'Videos') return '';
+  if (kwVon(a)) return kwLabel(kwVon(a));
   if (a.regel && a.datum) return fmtWtDM(a.datum);
   return '';
 }
 export const badgeHtml = (m) => `<span class="badge" style="${farbStil(modulFarbe(m))}">${esc(m)}</span>`;
 export function titelHtml(a) {
   if (!a.modul) return `<span class="txt">${esc(a.titel)}</span>`;
-  const rest = a.titel.startsWith(a.modul) ? a.titel.slice(a.modul.length).trim() : a.titel;
+  const rest = (a.titel.startsWith(a.modul) ? a.titel.slice(a.modul.length).trim() : a.titel).replace(/\s*·\s*VO\s.*$/, '');
   return `${badgeHtml(a.modul)}<span class="txt">${esc(rest)}</span>`;
 }
 

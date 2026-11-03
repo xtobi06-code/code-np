@@ -1,5 +1,5 @@
 import { F, ladeAlle, aendere, aendereOp, nachholen, beiOffline, offenNachzureichen, routine, beiFehler, FehlerToken } from './shared/core.js';
-import { offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
+import { kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
 import { icon, wetterSymbol } from './shared/icons.js';
@@ -109,7 +109,7 @@ function taskHtml(a, erl = false) {
   const ueber = !erl && ueberfaellig(a);
   const heuteTag = !erl && istHeute(a) && (a.faellig || a.regel);
   if (heuteTag) meta = 'Heute';
-  if (ueber) meta = a.faellig ? fmtWtDM(a.faellig) : a.kw ? metaText(a) : fmtWtDM(a.datum);
+  if (ueber) meta = a.faellig ? fmtWtDM(a.faellig) : kwVon(a) ? metaText(a) : fmtWtDM(a.datum);
   return `<div class="zeile task${erl ? ' erl' : ''}" style="${farbStil(farbeVon(a))}" data-id="${esc(a.id)}">
     <button class="kreis${erl ? ' an' : ''}" data-aktion="${erl ? 'wieder' : 'erledigt'}" aria-label="${erl ? 'Wiederherstellen' : 'Erledigt'}">${icon('check', 14, 3.2)}</button>
     <span class="haupt titel" data-aktion="bearbeiten">${titelHtml(a)}</span>${meta ? `<span class="neben${heuteTag ? ' heute' : ''}${ueber ? ' ueber' : ''}">${esc(meta)}</span>` : ''}</div>`;
@@ -338,7 +338,7 @@ function renderFinanzen() {
     $('fin-held').innerHTML = `<div class="reihe"><div><div class="klein">${ueber ? 'Über Budget' : `Übrig im ${monatName(monatKey(new Date()))}`}</div>
       <div class="gross" style="${ueber ? 'color:var(--bad)' : ''}">${euro(Math.abs(u.rest))}</div>
       <div class="unter">${ueber ? 'Ab jetzt bitte sparsam.' : `<b>${euro(u.restTag)}</b> pro Tag verfügbar`}</div></div>${ring(u.budget ? u.summe / u.budget : 0, farbe)}</div>
-      <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">${euro(u.summe)} von ${euro0(u.budget)} ausgegeben${u.fix ? ` · ${euro0(u.fix)} Fixkosten schon abgezogen` : ''}</div>`;
+      <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">${euro(u.summe)} von ${euro0(u.budget)} ausgegeben${u.fix ? ` · ${euro0(u.fix)} Fixkosten` : ''}</div>`;
     $('fin-hinweis').textContent = 'Ausgaben / Budget';
   } else {
     $('fin-held').innerHTML = `<div class="reihe"><div><div class="klein">Ø pro Monat</div>
@@ -347,10 +347,10 @@ function renderFinanzen() {
       <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">Budget ${euro0(u.budget)} pro Monat</div>`;
     $('fin-hinweis').textContent = 'Ø pro Monat / Budget';
   }
-  $('fin-kat').innerHTML = u.kats.map((x) => {
+  $('fin-kat').innerHTML = u.kats.filter((x) => !(x.fix > 0 && x.wert === 0)).map((x) => {
     const s = status(x.wert, Number(x.budget));
     const breite = x.budget ? Math.min(100, (x.wert / x.budget) * 100) : (x.wert ? 100 : 0);
-    const offen = S.offenKat === x.name;
+    const offen = S.offenKat === x.name && x.eintraege.length > 0;
     const eintraege = offen ? `<div class="eintraege">${x.eintraege.length ? x.eintraege.map((b) => `
       <div class="eintrag" data-buchung="${esc(b.id)}"><span class="neben">${fmtDM(b.datum)}</span><span class="haupt">${esc(b.text || x.name)}</span><span class="neben">${euro(b.betrag)}</span></div>`).join('') : '<div class="eintrag"><span class="haupt neben">Keine Einträge in diesem Zeitraum</span></div>'}</div>` : '';
     return `<div class="zeile kat" data-kat="${esc(x.name)}"><span class="symbol" style="background:${x.farbe}">${icon(katSymbol(x.name), 17, 2.2)}</span>

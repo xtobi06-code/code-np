@@ -1,5 +1,5 @@
 import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
-import { erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
+import { kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
 import { icon, wetterSymbol } from '../shared/icons.js';
@@ -108,7 +108,7 @@ function pixelVersatz() {
 /* ---------- Aufgaben ---------- */
 function zeileHtml(a) {
   const ueber = ueberfaellig(a);
-  const meta = ueber ? (a.faellig ? fmtDM(a.faellig) : a.kw ? metaText(a) : fmtDM(a.datum)) : metaText(a);
+  const meta = ueber ? (a.faellig ? fmtDM(a.faellig) : kwVon(a) ? metaText(a) : fmtDM(a.datum)) : metaText(a);
   const heute = !ueber && istHeute(a) && meta !== '';
   return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
     <span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div>`;
@@ -309,7 +309,7 @@ function stapelWeiter() {
   document.querySelectorAll('#stapel-punkte i').forEach((k, i) => k.classList.toggle('an', i === stapelIndex));
 }
 $('stapel').addEventListener('click', () => { stapelPause = Date.now() + 45000; stapelWeiter(); });
-setInterval(() => { if (Date.now() > stapelPause && !nacht && seite === 0) stapelWeiter(); }, 14000);
+setInterval(() => { if (panelEinst().stapelAuto === true && Date.now() > stapelPause && !nacht && seite === 0) stapelWeiter(); }, 14000);
 
 /* ---------- Ruhe-Zifferblatt ---------- */
 function ruheInfo() {
@@ -334,6 +334,7 @@ async function hintergrund() {
   const p = panelEinst();
   document.body.classList.toggle('ohne-glas', p.glas === false);
   szene.bewegung(!nacht && p.bewegung !== false);
+  szene.setzeStil(p.hintergrund);
   if (p.hintergrund !== 'fotos') { if (fotoListe) { fotoListe = ''; szene.setzeFotos([]); } return; }
   try {
     const dateien = (await ordner('bilder')).filter((d) => /\.(jpe?g|png|webp|heic)$/i.test(d.name));

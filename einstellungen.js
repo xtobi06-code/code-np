@@ -176,8 +176,9 @@ function panelHtml() {
     <div class="zeile"><span class="lbl">Nachtuhr ab</span><input type="time" data-p="panel.nachtVon" value="${esc(p.nachtVon)}"></div>
     <div class="zeile"><span class="lbl">Nachtuhr bis</span><input type="time" data-p="panel.nachtBis" value="${esc(p.nachtBis)}"></div>
     <div class="zeile"><span class="lbl">Bewegter Hintergrund</span>${schalter('panel.bewegung', p.bewegung !== false)}</div>
+    <div class="zeile"><span class="lbl">Karten wechseln automatisch</span>${schalter('panel.stapelAuto', p.stapelAuto === true)}</div>
     <div class="zeile"><span class="lbl">Glas-Effekt</span>${schalter('panel.glas', p.glas !== false)}</div>
-    <div class="zeile"><span class="lbl">Hintergrund</span><select data-p="panel.hintergrund" data-neu-zeichnen><option value="landschaft" ${p.hintergrund !== 'fotos' ? 'selected' : ''}>Landschaft</option><option value="fotos" ${p.hintergrund === 'fotos' ? 'selected' : ''}>Eigene Fotos</option></select></div>
+    <div class="zeile"><span class="lbl">Hintergrund</span><select data-p="panel.hintergrund" data-neu-zeichnen>${[['landschaft','Bayerischer Wald'],['gebirge','Hochgebirge'],['duenen','Hügel'],['aurora','Aurora'],['fotos','Eigene Fotos']].map(([v, n]) => `<option value="${v}" ${(p.hintergrund || 'landschaft') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     ${p.hintergrund === 'fotos' ? `<div class="zeile"><span class="lbl">Foto wechseln alle</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="panel.fotoMinuten" value="${esc(p.fotoMinuten)}"> Min.</div>` : ''}
   </div>
   <p class="fuss">Nachts zeigt das Panel nur eine gedimmte rote Uhr, Antippen weckt es für 90 Sekunden. Läuft das iPad ruckelig oder warm, schalte Bewegung oder Glas-Effekt aus.</p>
