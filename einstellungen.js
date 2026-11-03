@@ -168,7 +168,7 @@ function kleidungHtml() {
     <input class="links" style="flex:1" data-p="stufen.${i}.text" value="${esc(s.text)}">
     </div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="stufen">Stufe hinzufügen</button></div>
-    <div class="zeile"><span class="lbl">Schirm ab Regenwahrscheinlichkeit</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="e.kleidung.regenSchwelle" value="${esc(S.e.kleidung?.regenSchwelle ?? 40)}"> %</div>
+    <div class="zeile"><span class="lbl">Schirm ab Regenrisiko</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="e.kleidung.regenSchwelle" value="${esc(S.e.kleidung?.regenSchwelle ?? 40)}"> %</div>
   </div>
   ${knoepfe('kleidung')}`;
 }
