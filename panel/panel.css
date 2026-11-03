@@ -20,7 +20,7 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 
 .app { position: fixed; inset: 0; z-index: 2; overflow: hidden; transition: transform 3s ease, opacity .8s; }
 .seiten { display: flex; width: 300%; height: 100%; transition: transform .6s cubic-bezier(.2, .85, .25, 1); will-change: transform; }
-.seite { width: 33.3333%; height: 100%; padding: max(1.4rem, env(safe-area-inset-top)) 1.6rem 3.5rem; flex: none; }
+.seite { width: 33.3333%; height: 100%; padding: calc(max(.5rem, env(safe-area-inset-top)) + 1rem) 1.6rem 3.2rem; flex: none; }
 
 /* Übersicht */
 .uebersicht { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr) minmax(0, 1fr); gap: 1.125rem; }
@@ -181,3 +181,6 @@ body.nacht-wach .ruhe { color: #fff; }
   .uebersicht > .spalte.links .stapel { flex: 1; min-height: 15rem; }
   .kacheln.gross { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* Unterer Rand läuft in Schwarz aus: der Systemrahmen unter dem Fenster ist schwarz, so entsteht keine harte Kante. */
+body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 5rem; z-index: 1; pointer-events: none; background: linear-gradient(transparent, rgba(0, 0, 0, .85)); }
