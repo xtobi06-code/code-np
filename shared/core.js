@@ -79,6 +79,15 @@ export async function routine(jetzt = new Date()) {
 
 export const PANEL_STANDARD = { nachtVon: '23:00', nachtBis: '06:30', bewegung: true, glas: true, hintergrund: 'landschaft', fotoMinuten: 15 };
 export const panelEinst = () => ({ ...PANEL_STANDARD, ...(F['einstellungen.json']?.panel || {}) });
+// Datum für die Szene: normalerweise jetzt, zur Vorschau eine feste Uhrzeit.
+export function szenenDatum() {
+  const z = panelEinst().szeneZeit;
+  const d = new Date();
+  if (!z) return d;
+  const [h, m] = String(z).split(':').map(Number);
+  d.setHours(h, m || 0, 0, 0);
+  return d;
+}
 export const lichtModi = () => F['einstellungen.json']?.licht || [];
 
 /* Offline-Warteschlange: Änderungen als beschreibbare Operationen, die bei Netzproblemen

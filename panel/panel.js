@@ -1,4 +1,4 @@
-import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
+import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi, szenenDatum } from '../shared/core.js';
 import { module as modulListe, kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
@@ -227,7 +227,7 @@ async function ladeWetter() {
   stapelRendern();
   ruheInfo();
 }
-function szenenTakt() { szene.aktualisiere(new Date(), wetter ? wetter.code : 0); }
+function szenenTakt() { szene.aktualisiere(szenenDatum(), wetter ? wetter.code : 0); }
 
 /* ---------- Smart Stack ---------- */
 function termineKarte() {
@@ -365,6 +365,7 @@ async function hintergrund() {
   document.body.classList.toggle('ohne-glas', p.glas === false);
   szene.bewegung(!nacht && p.bewegung !== false);
   szene.setzeStil(p.hintergrund);
+  szenenTakt();
   if (p.hintergrund !== 'fotos') { if (fotoListe) { fotoListe = ''; szene.setzeFotos([]); } return; }
   try {
     const dateien = (await ordner('bilder')).filter((d) => /\.(jpe?g|png|webp|heic)$/i.test(d.name));

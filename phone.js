@@ -3,7 +3,7 @@ import { kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istH
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
 import { erstelleSzene } from './shared/scene.js';
-import { panelEinst } from './shared/core.js';
+import { panelEinst, szenenDatum } from './shared/core.js';
 import { icon, wetterSymbol } from './shared/icons.js';
 import { headerText, esc, euro, euro0, uid, isoZeit, isoDate, fmtDM, fmtWtDM, parseBetrag, MON, addDays, dunkler } from './shared/util.js';
 
@@ -601,7 +601,7 @@ szene.bewegung(false);
 function szeneTakt() {
   const st = panelEinst().hintergrund;
   szene.setzeStil(st === 'fotos' ? 'landschaft' : st);
-  szene.aktualisiere(new Date(), wetterCode);
+  szene.aktualisiere(szenenDatum(), wetterCode);
 }
 szeneTakt();
 starteZyklus(szeneTakt, 120);
