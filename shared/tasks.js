@@ -94,8 +94,9 @@ export function istHeute(a, jetzt = new Date()) {
   return a.ab === h || a.datum === h || (!a.regel && (a.erstellt || '').startsWith(h));
 }
 export function ueberfaellig(a, jetzt = new Date()) {
-  const d = a.faellig || (a.regel ? a.datum : null);
-  return !!d && d < isoDate(jetzt);
+  if (a.faellig) return a.faellig < isoDate(jetzt);
+  if (a.kw) return a.kw < kwKey(jetzt); // Wochenaufgaben sind bis Wochenende fällig
+  return !!(a.regel && a.datum) && a.datum < isoDate(jetzt);
 }
 export function offene(aufgaben, liste, jetzt = new Date()) {
   return aufgaben

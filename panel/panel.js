@@ -108,7 +108,7 @@ function pixelVersatz() {
 /* ---------- Aufgaben ---------- */
 function zeileHtml(a) {
   const ueber = ueberfaellig(a);
-  const meta = ueber ? fmtDM(a.faellig || a.datum) : metaText(a);
+  const meta = ueber ? (a.faellig ? fmtDM(a.faellig) : a.kw ? metaText(a) : fmtDM(a.datum)) : metaText(a);
   const heute = !ueber && istHeute(a) && meta !== '';
   return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
     <span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div>`;
@@ -417,8 +417,8 @@ addEventListener('resize', () => { if (innerWidth !== breite) { breite = innerWi
     t.onclick = () => t.remove();
     document.body.appendChild(t);
   };
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#datum')) return;
+  window.addEventListener('pointerup', (e) => {
+    if (!e.target.closest || !e.target.closest('.sperr')) return;
     const n = Date.now();
     taps = taps.filter((x) => n - x < 900).concat(n);
     if (taps.length >= 3) { taps = []; info(); }

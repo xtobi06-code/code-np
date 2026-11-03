@@ -109,7 +109,7 @@ function taskHtml(a, erl = false) {
   const ueber = !erl && ueberfaellig(a);
   const heuteTag = !erl && istHeute(a) && (a.faellig || a.regel);
   if (heuteTag) meta = 'Heute';
-  if (ueber) meta = fmtWtDM(a.faellig || a.datum);
+  if (ueber) meta = a.faellig ? fmtWtDM(a.faellig) : a.kw ? metaText(a) : fmtWtDM(a.datum);
   return `<div class="zeile task${erl ? ' erl' : ''}" style="${farbStil(farbeVon(a))}" data-id="${esc(a.id)}">
     <button class="kreis${erl ? ' an' : ''}" data-aktion="${erl ? 'wieder' : 'erledigt'}" aria-label="${erl ? 'Wiederherstellen' : 'Erledigt'}">${icon('check', 14, 3.2)}</button>
     <span class="haupt titel" data-aktion="bearbeiten">${titelHtml(a)}</span>${meta ? `<span class="neben${heuteTag ? ' heute' : ''}${ueber ? ' ueber' : ''}">${esc(meta)}</span>` : ''}</div>`;
