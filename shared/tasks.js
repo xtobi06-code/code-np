@@ -87,6 +87,7 @@ export function erzeugen(e, regeln, vorhanden, jetzt = new Date()) {
   return neu;
 }
 
+const ohneTermin = (a) => !(a.faellig || a.datum || a.ab || kwVon(a));
 const sk = (a) => a.faellig || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
 // Kalenderwoche einer Aufgabe: bei Wochenaufgaben und Videos (nach Datum der Vorlesung).
 export const kwVon = (a) => a.kw || (a.typ === 'Videos' && a.datum ? kwKey(parseDate(a.datum)) : null);
@@ -103,7 +104,7 @@ export function ueberfaellig(a, jetzt = new Date()) {
 export function offene(aufgaben, liste, jetzt = new Date()) {
   return aufgaben
     .filter((a) => a.liste === liste && a.status === 'offen')
-    .sort((x, y) => (ueberfaellig(y, jetzt) - ueberfaellig(x, jetzt)) || (istHeute(y, jetzt) - istHeute(x, jetzt)) || sk(x).localeCompare(sk(y)) || (x.modul || '').localeCompare(y.modul || '') || x.titel.localeCompare(y.titel));
+    .sort((x, y) => (ohneTermin(x) - ohneTermin(y)) || (ueberfaellig(y, jetzt) - ueberfaellig(x, jetzt)) || (istHeute(y, jetzt) - istHeute(x, jetzt)) || sk(x).localeCompare(sk(y)) || (x.modul || '').localeCompare(y.modul || '') || x.titel.localeCompare(y.titel));
 }
 export function erledigte(aufgaben, liste) {
   return aufgaben.filter((a) => a.liste === liste && a.status === 'erledigt')
