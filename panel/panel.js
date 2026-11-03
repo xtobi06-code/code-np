@@ -46,6 +46,13 @@ function zeige(i, sofort = false) {
   s.style.transform = `translate3d(${-seite * 33.3333}%, 0, 0)`;
   document.querySelectorAll('#punkte button').forEach((b, k) => b.classList.toggle('an', k === seite));
   document.body.classList.toggle('auf-uhr', seite === 0);
+  if (nacht) {
+    // Nachts bleibt die Uhr dunkel und rot; nur wer zu Übersicht oder Licht wechselt, weckt das Panel für 90 Sekunden.
+    const wach = seite !== 0;
+    document.body.classList.toggle('nacht-wach', wach);
+    document.body.classList.toggle('nachtmodus', !wach);
+    wachBis = wach ? Date.now() + 90000 : 0;
+  }
 }
 let start = null;
 let gewischt = 0;
@@ -62,10 +69,7 @@ document.addEventListener('click', (e) => {
 }, true);
 document.addEventListener('pointerdown', () => {
   letzteBeruehrung = Date.now();
-  if (nacht) {
-    wachBis = Date.now() + 90000;
-    if (!document.body.classList.contains('nacht-wach')) { document.body.classList.add('nacht-wach'); document.body.classList.remove('nachtmodus'); zeige(1); }
-  }
+  if (nacht && wachBis) wachBis = Date.now() + 90000;
 }, true);
 document.querySelectorAll('[data-seite]').forEach((b) => b.addEventListener('click', () => zeige(Number(b.dataset.seite))));
 
