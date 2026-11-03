@@ -204,8 +204,11 @@ zub.addEventListener('click', (e) => {
   if (f) S.neuFaellig = f.dataset.faellig;
   zubehoer();
 });
-zub.addEventListener('change', (e) => {
-  if (e.target.dataset.datum === 'neu') { S.neuFaellig = e.target.value; zubehoer(); $('todo-input').focus(); }
+// Datum: erst nach dem Schließen des Kalenders neu zeichnen, sonst bricht iOS die Auswahl ab
+zub.addEventListener('change', (e) => { if (e.target.dataset.datum === 'neu') S.neuFaellig = e.target.value; });
+zub.addEventListener('focusout', (e) => {
+  if (e.target.dataset.datum !== 'neu') return;
+  setTimeout(() => { zubehoer(); $('todo-input').focus(); }, 80);
 });
 $('todo-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -248,7 +251,8 @@ $('blatt-aufgabe').addEventListener('click', (e) => {
   if (m) { bearbeite.modul = m.dataset.modul; aufgabeZeichnen(); }
   if (f) { bearbeite.faellig = f.dataset.faellig; aufgabeZeichnen(); }
 });
-$('blatt-aufgabe').addEventListener('change', (e) => { if (e.target.dataset.datum === 'bearbeiten') { bearbeite.faellig = e.target.value; aufgabeZeichnen(); } });
+$('blatt-aufgabe').addEventListener('change', (e) => { if (e.target.dataset.datum === 'bearbeiten') bearbeite.faellig = e.target.value; });
+$('blatt-aufgabe').addEventListener('focusout', (e) => { if (e.target.dataset.datum === 'bearbeiten') setTimeout(aufgabeZeichnen, 80); });
 $('aufgabe-sichern').onclick = () => {
   const b = bearbeite;
   const titel = $('aufgabe-titel').value.trim() || b.titel;
