@@ -2,7 +2,6 @@ main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 
 .tint { position: fixed; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none; transition: background .6s;
   background: radial-gradient(120% 100% at 15% 0%, var(--tint-farbe, rgba(0,122,255,.16)), transparent 70%); }
 
-.kante-oben.an { opacity: 1; }
 .nav-knoepfe { position: fixed; top: calc(env(safe-area-inset-top) + 12px); right: max(16px, calc(50% - 304px)); display: flex; gap: 10px; z-index: 25; }
 .rund { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text); border: 0; padding: 0; }
 .rund:active { transform: scale(.92); }
