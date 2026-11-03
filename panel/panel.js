@@ -1,174 +1,397 @@
-import { F, ladeAlle, ladeDatei, aendere, routine, beiFehler, FehlerToken } from '../shared/core.js';
-import { offene, metaText, titelHtml, farbeVon, istHeute, termineAm, modulFarbe } from '../shared/tasks.js';
-import { uebersicht } from '../shared/finance.js';
-import { holeWetter, wetterHtml, starteZyklus, haltWachen, toast } from '../shared/app.js';
-import { icon } from '../shared/icons.js';
-import { WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, hexRgba } from '../shared/util.js';
+import { F, ladeAlle, aendere, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
+import { offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
+import { uebersicht, status as budgetStatus } from '../shared/finance.js';
+import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
+import { icon, wetterSymbol } from '../shared/icons.js';
+import { erstelleSzene } from '../shared/scene.js';
+import { ordner, rohdatei } from '../shared/github.js';
+import { WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, euro0, hexRgba, kwKey, montag, addDays, fmtDM } from '../shared/util.js';
 
 const $ = (id) => document.getElementById(id);
 const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'termine.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
+const LS = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
+};
+
+const szene = erstelleSzene($('szene'));
+let wetter = null;
+let seite = 0;
+let letzteBeruehrung = Date.now();
+let wachBis = 0;
+let nacht = false;
 let tagGeladen = '';
+let fotoListe = '';
 
-$('einst').innerHTML = icon('regler', 16) + 'Einstellungen';
 beiFehler((e) => toast(e instanceof FehlerToken ? e.message : 'Speichern fehlgeschlagen'));
+$('einst').innerHTML = icon('regler', 18);
+$('ic-studium').innerHTML = icon('kappe', 16, 2.2);
+$('ic-studium').style.setProperty('--ic', 'linear-gradient(160deg, #4aa8ff, #1f6fe0)');
+$('ic-leben').innerHTML = icon('haus', 16, 2.2);
+$('ic-leben').style.setProperty('--ic', 'linear-gradient(160deg, #a3a1ff, #6461f0)');
+$('ic-licht').innerHTML = icon('lampe', 16, 2.2);
+$('ic-licht').style.setProperty('--ic', 'linear-gradient(160deg, #ffd84d, #ffaa00)');
 
-function uhr() {
+/* ---------- Seiten und Gesten ---------- */
+function zeige(i, sofort = false) {
+  seite = Math.max(0, Math.min(2, i));
+  const s = $('seiten');
+  if (sofort) { s.style.transition = 'none'; requestAnimationFrame(() => { s.style.transition = ''; }); }
+  s.style.transform = `translate3d(${-seite * 33.3333}%, 0, 0)`;
+  document.querySelectorAll('#punkte button').forEach((b, k) => b.classList.toggle('an', k === seite));
+}
+let start = null;
+let gewischt = 0;
+$('app').addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY }; });
+$('app').addEventListener('pointerup', (e) => {
+  if (!start) return;
+  const dx = e.clientX - start.x;
+  const dy = e.clientY - start.y;
+  start = null;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.3) { gewischt = Date.now(); zeige(seite + (dx < 0 ? 1 : -1)); }
+});
+document.addEventListener('click', (e) => {
+  if (Date.now() - gewischt < 350) { e.preventDefault(); e.stopPropagation(); }
+}, true);
+document.addEventListener('pointerdown', () => {
+  letzteBeruehrung = Date.now();
+  if (nacht) {
+    wachBis = Date.now() + 90000;
+    if (!document.body.classList.contains('nacht-wach')) { document.body.classList.add('nacht-wach'); document.body.classList.remove('nachtmodus'); zeige(0); }
+  }
+}, true);
+document.querySelectorAll('[data-seite]').forEach((b) => b.addEventListener('click', () => zeige(Number(b.dataset.seite))));
+
+/* ---------- Zeit, Nacht, Einbrennschutz ---------- */
+const minuten = (s) => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+function istNacht(d, p) {
+  const jetzt = d.getHours() * 60 + d.getMinutes();
+  const von = minuten(p.nachtVon);
+  const bis = minuten(p.nachtBis);
+  return von > bis ? jetzt >= von || jetzt < bis : jetzt >= von && jetzt < bis;
+}
+let letzteUhr = '';
+function takt() {
   const d = new Date();
-  $('uhr').textContent = clockText(d);
-  $('wt').textContent = WT_LANG[d.getDay()];
-  $('dt').textContent = `${d.getDate()}. ${MON_LANG[d.getMonth()]}`;
-  $('kw').textContent = `KW ${isoWeek(d)}`;
-  const h = d.getHours();
-  document.body.classList.toggle('nacht', h >= 23 || h < 6);
+  const u = clockText(d);
+  if (u !== letzteUhr) {
+    letzteUhr = u;
+    $('uhr').textContent = u;
+    $('r-uhr').textContent = u;
+    $('datum').innerHTML = `${WT_LANG[d.getDay()]}, ${d.getDate()}. ${MON_LANG[d.getMonth()]}<span class="kw">KW ${isoWeek(d)}</span>`;
+    $('r-datum').textContent = `${WT_LANG[d.getDay()]}, ${d.getDate()}. ${MON_LANG[d.getMonth()]}`;
+  }
+  const p = panelEinst();
+  const n = istNacht(d, p);
+  if (n !== nacht) {
+    nacht = n;
+    document.body.classList.toggle('nachtmodus', n);
+    document.body.classList.remove('nacht-wach');
+    szene.bewegung(!n && p.bewegung);
+    zeige(n ? 2 : 0);
+  }
+  if (nacht && wachBis && Date.now() > wachBis) {
+    wachBis = 0;
+    document.body.classList.remove('nacht-wach');
+    document.body.classList.add('nachtmodus');
+    zeige(2);
+  }
+  if (!nacht && seite !== 0 && Date.now() - letzteBeruehrung > 90000) zeige(0);
+}
+function pixelVersatz() {
+  const x = Math.round((Math.random() - 0.5) * 10);
+  const y = Math.round((Math.random() - 0.5) * 8);
+  $('app').style.transform = `translate(${x}px, ${y}px)`;
 }
 
-function status(art, text) {
-  $('sync').innerHTML = `<span class="punktstatus ${art}"></span>${esc(text)}`;
-}
-
+/* ---------- Aufgaben ---------- */
 function zeileHtml(a) {
-  const c = farbeVon(a);
-  const meta = metaText(a);
-  return `<div class="task${istHeute(a) ? ' heute' : ''}" data-id="${esc(a.id)}" style="--c:${c}">
-    <span class="kreis">${icon('check', 18, 3)}</span>
-    <span class="titel">${titelHtml(a, esc)}</span>${meta ? `<span class="meta">${esc(meta)}</span>` : ''}</div>`;
+  const ueber = ueberfaellig(a);
+  const meta = ueber ? fmtDM(a.faellig) : metaText(a);
+  const heute = !ueber && istHeute(a) && meta !== '';
+  return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
+    <span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div>`;
 }
-
-// Zeigt so viele Zeilen, wie in die Karte passen, und darunter „+ n weitere“.
 function einpassen(box, gesamt) {
   const rows = [...box.querySelectorAll('.task')];
   if (!rows.length) return;
-  const max = box.clientHeight - 34;
+  const reserve = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.6;
+  const top = box.getBoundingClientRect().top;
   let sichtbar = rows.length;
   for (let i = 0; i < rows.length; i++) {
-    if (rows[i].offsetTop - box.offsetTop + rows[i].offsetHeight > (i === rows.length - 1 ? box.clientHeight : max)) { sichtbar = i; break; }
+    const unten = rows[i].getBoundingClientRect().bottom - top;
+    const grenze = i === rows.length - 1 ? box.clientHeight : box.clientHeight - reserve;
+    if (unten > grenze + 1) { sichtbar = i; break; }
   }
   rows.slice(sichtbar).forEach((r) => r.remove());
   if (sichtbar < gesamt) box.insertAdjacentHTML('beforeend', `<div class="mehr">+ ${gesamt - sichtbar} weitere</div>`);
 }
-
 function liste(name) {
   const box = $(name);
   const auf = offene(F['aufgaben.json']?.aufgaben || [], name);
-  $(`n-${name}`).textContent = auf.length ? `${auf.length} offen` : '';
-  if (!auf.length) {
-    box.innerHTML = `<div class="leer">${icon('check', 34, 2.5)}<span>Alles erledigt</span></div>`;
-    return;
-  }
+  $(`n-${name}`).textContent = auf.length ? String(auf.length) : '';
+  if (!auf.length) { box.innerHTML = `<div class="leer">${icon('check', 38, 2.4)}<span>Alles erledigt</span></div>`; return; }
   box.innerHTML = auf.map(zeileHtml).join('');
   einpassen(box, auf.length);
 }
+$('app').addEventListener('click', (e) => {
+  const row = e.target.closest('.task');
+  if (!row || row.classList.contains('fertig')) return;
+  const id = row.dataset.id;
+  row.classList.add('fertig');
+  const zeit = new Date().toISOString();
+  setTimeout(() => {
+    const setze = (offen) => aendere('aufgaben.json', (d) => {
+      const a = d.aufgaben.find((x) => x.id === id);
+      if (a) { a.status = offen ? 'offen' : 'erledigt'; a.erledigt = offen ? null : zeit; }
+      return d;
+    }, offen ? 'Rückgängig' : 'Abgehakt').catch(() => {});
+    setze(false);
+    listen();
+    const a = F['aufgaben.json'].aufgaben.find((x) => x.id === id);
+    toast(`${a ? a.titel : 'Aufgabe'} erledigt`, { label: 'Rückgängig', fn: () => { setze(true); listen(); } }, 6000);
+  }, 420);
+});
+function listen() { liste('studium'); liste('leben'); }
 
-function termine() {
+/* ---------- Licht ---------- */
+function shortcutUrl(name) {
+  const z = encodeURIComponent(location.href.split('#')[0]);
+  return `shortcuts://x-callback-url/run-shortcut?name=${encodeURIComponent(name)}&x-success=${z}&x-cancel=${z}&x-error=${z}`;
+}
+function kachel(m, i, gross) {
+  const zuletzt = LS.get('np-licht', null);
+  const an = zuletzt && zuletzt.name === m.name;
+  const c = m.farbe || '#FFD60A';
+  return `<a class="kachel${an ? ' an' : ''}" data-licht="${i}" href="${esc(shortcutUrl(m.kurzbefehl || m.name))}">
+    <span class="k-ic" style="--c:${c};--glow:${hexRgba(c, 0.45)}">${icon(m.symbol || 'lampe', 22, 2.2)}</span>
+    ${gross && m.favorit ? `<span class="stern-mark">${icon('stern', 16, 2.2)}</span>` : ''}
+    <span class="k-text"><span class="k-name">${esc(m.name)}</span>${an ? `<span class="k-sub">Zuletzt um ${esc(zuletzt.zeit)}</span>` : ''}</span></a>`;
+}
+function licht() {
+  const modi = lichtModi();
+  let fav = modi.map((m, i) => [m, i]).filter(([m]) => m.favorit);
+  if (!fav.length) fav = modi.map((m, i) => [m, i]);
+  $('licht-fav').innerHTML = fav.slice(0, 4).map(([m, i]) => kachel(m, i, false)).join('');
+  $('n-licht').textContent = modi.length > 4 ? `(${modi.length})` : '';
+  $('licht-alle').innerHTML = modi.map((m, i) => kachel(m, i, true)).join('');
+  const z = LS.get('np-licht', null);
+  $('licht-zuletzt').textContent = z ? `Zuletzt: ${z.name} um ${z.zeit}` : 'Tippe auf eine Szene';
+}
+document.addEventListener('click', (e) => {
+  const k = e.target.closest('[data-licht]');
+  if (!k) return;
+  const m = lichtModi()[Number(k.dataset.licht)];
+  if (!m) return;
+  LS.set('np-licht', { name: m.name, zeit: clockText(new Date()) });
+  setTimeout(() => { licht(); if (seite === 1) zeige(0); }, 300);
+});
+
+/* ---------- Wetter ---------- */
+function wetterKurz() {
+  if (!wetter) return;
+  const w = wetter;
+  $('wetter-kurz').innerHTML = `${icon(wetterSymbol(w.code, !w.tag), 22, 2)}<span>${w.temperatur}° ${esc(w.zustand)}</span>${w.max != null ? `<span class="hl">H ${w.max}° T ${w.min}°</span>` : ''}`;
+  const e = w.empfehlung;
+  const k = $('kleidung');
+  k.hidden = !e;
+  if (e) k.innerHTML = `${icon('shirt', 20, 2)}<span>${w.morgen ? 'Morgen: ' : ''}${esc(e.kleidung)}${e.schirm ? ' · Schirm' : ''}</span>`;
+}
+async function ladeWetter() {
+  try { wetter = await holeWetter(F['einstellungen.json']); } catch { return; }
+  wetterKurz();
+  szenenTakt();
+  stapelRendern();
+  ruheInfo();
+}
+function szenenTakt() { szene.aktualisiere(new Date(), wetter ? wetter.code : 0); }
+
+/* ---------- Smart Stack ---------- */
+function termineKarte() {
   const e = F['einstellungen.json'];
+  if (!e?.semester) return null;
   const regeln = F['regeln.json']?.regeln || [];
   const kal = F['termine.json']?.termine || [];
-  if (!e?.semester) return;
   const jetzt = new Date();
+  const jz = clockText(jetzt);
   let tag = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate());
-  let liste = termineAm(tag, e, regeln, kal);
-  const jetztZeit = clockText(jetzt);
-  let titel = 'Heute';
-  if (jetzt.getHours() >= 18 && !liste.some((t) => t.zeit >= jetztZeit)) {
-    tag = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate() + 1);
-    liste = termineAm(tag, e, regeln, kal);
-    titel = 'Morgen';
+  let alle = termineAm(tag, e, regeln, kal);
+  let kommend = alle.filter((t) => !t.zeit || t.zeit >= jz);
+  let label = 'Heute';
+  if (!kommend.length) {
+    for (let i = 1; i <= 7; i++) {
+      tag = addDays(tag, 1);
+      alle = termineAm(tag, e, regeln, kal);
+      if (alle.length) { kommend = alle; label = i === 1 ? 'Morgen' : WT_LANG[tag.getDay()]; break; }
+    }
   }
-  $('heute-titel').textContent = titel;
-  if (!liste.length) {
-    $('termine').innerHTML = '<div class="termin vorbei"><span class="t">Keine Termine</span></div>';
-    return;
+  const lc = '#ff9f0a';
+  if (!kommend.length) {
+    return `<div class="k-label" style="--lc:${lc}">${icon('kalender', 16, 2.2)}Termine</div><div class="k-gross">Keine Termine</div><div class="k-zeit">Diese Woche ist nichts mehr geplant.</div>`;
   }
-  $('termine').innerHTML = liste.map((t) => {
-    const vorbei = titel === 'Heute' && t.zeit && t.zeit < jetztZeit && !t.kalender ? ' vorbei' : '';
-    const c = t.kalender ? '#FF9F0A' : modulFarbe(t.modul);
-    return `<div class="termin${vorbei}" style="--c:${c}"><span class="zeit">${esc(t.zeit || 'ganzt.')}</span><span class="punkt"></span><span class="t">${esc(t.titel)}</span></div>`;
-  }).join('');
+  const n = kommend[0];
+  let bis = '';
+  if (label === 'Heute' && n.zeit) {
+    const diff = minuten(n.zeit) - (jetzt.getHours() * 60 + jetzt.getMinutes());
+    bis = diff <= 0 ? 'jetzt' : diff < 60 ? `in ${diff} Min.` : `in ${Math.floor(diff / 60)} Std.${diff % 60 ? ` ${diff % 60} Min.` : ''}`;
+  }
+  const titel = n.modul ? `${badgeHtml(n.modul)}<span>${esc(n.titel.slice(n.modul.length).trim())}</span>` : `<span>${esc(n.titel)}</span>`;
+  const rest = kommend.slice(1, 4).map((t) => `<div class="k-zeile" style="--c:${t.kalender ? lc : modulFarbe(t.modul)}"><span class="z">${esc(t.zeit || 'ganzt.')}</span><span class="p"></span><span class="t">${esc(t.titel)}</span></div>`).join('');
+  return `<div class="k-label" style="--lc:${lc}">${icon('kalender', 16, 2.2)}${esc(label)}</div>
+    <div class="k-gross">${titel}</div><div class="k-zeit"><b>${esc(n.zeit || 'Ganztägig')}</b>${bis ? ` · ${bis}` : ''}</div>
+    <div class="k-liste">${rest}</div>`;
 }
-
-function shortcutUrl(name) {
-  const zurueck = encodeURIComponent(location.href.split('#')[0]);
-  return `shortcuts://x-callback-url/run-shortcut?name=${encodeURIComponent(name)}&x-success=${zurueck}&x-cancel=${zurueck}&x-error=${zurueck}`;
+function wetterKarte() {
+  if (!wetter) return null;
+  const w = wetter;
+  const nachtStunde = (z) => { const h = Number(z.slice(0, 2)); return h < 7 || h >= 17; };
+  const stunden = w.verlauf.filter((_, i) => i % 2 === 0).slice(0, 6).map((h, i) => `<div><small>${i === 0 ? 'Jetzt' : h.zeit.slice(0, 2)}</small>${icon(wetterSymbol(h.code ?? w.code, nachtStunde(h.zeit)), 18, 2)}<span>${Math.round(h.temp)}°</span><span class="regen">${h.regen >= 30 ? `${h.regen} %` : ''}</span></div>`).join('');
+  const e = w.empfehlung;
+  const regenAb = w.verlauf.slice(1).find((h) => h.regen >= 40);
+  const regenText = w.verlauf[0] && w.verlauf[0].regen >= 40 ? 'Gerade Regen möglich' : regenAb ? `Regen ab etwa ${regenAb.zeit.slice(0, 2)} Uhr (${regenAb.regen} %)` : '';
+  return `<div class="k-label" style="--lc:#64d2ff">${icon('wolke-sonne', 16, 2.2)}Garching</div>
+    <div class="w-reihe"><span class="w-temp">${w.temperatur}°</span>${icon(wetterSymbol(w.code, !w.tag), 40, 1.8)}
+    <span class="w-zust">${esc(w.zustand)}${w.max != null ? `<small>H ${w.max}° · T ${w.min}°</small>` : ''}</span></div>
+    ${e ? `<div class="k-zeit" style="margin-top:.7rem">${w.morgen ? 'Morgen' : 'Heute'}: <b>${esc(e.kleidung)}</b>${e.schirm ? ' · Schirm mitnehmen' : ''}</div>` : ''}
+    ${regenText ? `<div class="k-zeit" style="color:#64d2ff;font-size:.9375rem">${esc(regenText)}</div>` : ''}
+    <div class="stunden">${stunden}</div>`;
 }
-
-function licht() {
-  const knoepfe = F['einstellungen.json']?.licht || [];
-  $('licht').innerHTML = knoepfe.map((k, i) => {
-    const c = k.farbe || '#FFD60A';
-    const breit = knoepfe.length % 2 === 1 && i === knoepfe.length - 1 ? ' breit' : '';
-    return `<a class="lb${breit}" href="${esc(shortcutUrl(k.kurzbefehl || k.name))}" style="background:${hexRgba(c, 0.2)};border:1px solid ${hexRgba(c, 0.28)}">
-      <span class="knopf" style="background:${c}">${icon(k.symbol || 'lampe', 24, 2.2)}</span><span class="name">${esc(k.name)}</span></a>`;
-  }).join('');
-}
-
-function budget() {
+function budgetKarte() {
   const kats = F['kategorien.json']?.kategorien;
-  if (!kats?.length || !F['kosten.json']) { $('budget').textContent = ''; return; }
+  if (!kats?.length || !F['kosten.json']) return null;
   const u = uebersicht(F['kosten.json'], kats, F['einstellungen.json'], 'monat');
-  $('budget').innerHTML = u.rest >= 0
-    ? `Budget heute <b>${euro(u.restTag)}</b> · ${euro(u.rest)} übrig im Monat`
-    : `<b style="color:#FF453A">${euro(-u.rest)} über Budget</b>`;
+  const anteil = u.budget ? Math.min(1, u.summe / u.budget) : 0;
+  const st = budgetStatus(u.summe, u.budget);
+  const farbe = st === 'bad' ? '#ff453a' : st === 'warn' ? '#ff9f0a' : '#30d158';
+  const R = 30;
+  const U = 2 * Math.PI * R;
+  const ring = `<svg class="ring" viewBox="0 0 76 76" width="76" height="76" style="width:4.75rem;height:4.75rem"><circle cx="38" cy="38" r="${R}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="8"/>
+    <circle cx="38" cy="38" r="${R}" fill="none" stroke="${farbe}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(anteil * U).toFixed(1)} ${U.toFixed(1)}" transform="rotate(-90 38 38)"/>
+    <text x="38" y="43" text-anchor="middle">${Math.round(anteil * 100)}%</text></svg>`;
+  const top = u.kats.filter((k) => k.wert > 0).sort((a, b) => b.wert - a.wert).slice(0, 3).map((k) =>
+    `<div class="b-zeile" style="--c:${k.farbe}"><span class="name">${esc(k.name)}</span><span class="bar"><i style="width:${Math.min(100, k.budget ? (k.wert / k.budget) * 100 : 100)}%"></i></span><span class="n">${euro0(k.wert)}</span></div>`).join('');
+  const letzter = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const tage = letzter - new Date().getDate() + 1;
+  return `<div class="k-label" style="--lc:#30d158">${icon('geldbeutel', 16, 2.2)}Budget</div>
+    <div class="b-reihe"><div><div class="b-klein" style="margin:0">${u.rest >= 0 ? 'Heute verfügbar' : 'Über Budget'}</div><div class="b-gross" style="${u.rest < 0 ? 'color:#ff6b61' : ''}">${euro(u.rest >= 0 ? u.restTag : -u.rest)}</div>
+    <div class="b-klein">${euro0(Math.max(0, u.rest))} übrig · noch ${tage} ${tage === 1 ? 'Tag' : 'Tage'}</div></div>${ring}</div>
+    <div class="b-fuss">${top}</div>`;
+}
+function wocheKarte() {
+  const jetzt = new Date();
+  const k = kwKey(jetzt);
+  const mo = isoDate(montag(jetzt));
+  const so = isoDate(addDays(montag(jetzt), 6));
+  const auf = (F['aufgaben.json']?.aufgaben || []).filter((a) => a.liste === 'studium' && a.regel && (a.kw ? a.kw === k : a.datum >= mo && a.datum <= so));
+  if (!auf.length) return null;
+  const fertig = auf.filter((a) => a.status === 'erledigt').length;
+  const nachModul = {};
+  auf.forEach((a) => { const m = nachModul[a.modul] || (nachModul[a.modul] = { g: 0, f: 0 }); m.g++; if (a.status === 'erledigt') m.f++; });
+  const zeilen = Object.entries(nachModul).slice(0, 6).map(([m, v]) =>
+    `<div class="b-zeile" style="--c:${modulFarbe(m)}"><span class="name" style="width:3.2rem">${badgeHtml(m)}</span><span class="bar"><i style="width:${(v.f / v.g) * 100}%"></i></span><span class="n" style="width:2.6rem">${v.f}/${v.g}</span></div>`).join('');
+  return `<div class="k-label" style="--lc:#d98cff">${icon('kappe', 16, 2.2)}Woche · KW ${isoWeek(jetzt)}</div>
+    <div class="k-gross">${fertig} von ${auf.length} erledigt</div><div class="b-fuss" style="margin-top:auto">${zeilen}</div>`;
+}
+let stapelIndex = 0;
+let stapelPause = 0;
+let stapelIds = [];
+function stapelRendern() {
+  const h = new Date().getHours();
+  const karten = { termine: termineKarte(), wetter: wetterKarte(), budget: budgetKarte(), woche: wocheKarte() };
+  const reihenfolge = h < 10 ? ['wetter', 'termine', 'woche', 'budget'] : h < 18 ? ['termine', 'wetter', 'woche', 'budget'] : ['termine', 'budget', 'woche', 'wetter'];
+  const ids = reihenfolge.filter((id) => karten[id]);
+  const aktuell = stapelIds[stapelIndex];
+  if (ids.join() !== stapelIds.join()) stapelIndex = ids.length !== stapelIds.length ? 0 : Math.max(0, ids.indexOf(aktuell));
+  stapelIds = ids;
+  $('stapel-karten').innerHTML = ids.map((id, i) => `<div class="karte${i === stapelIndex ? ' an' : ''}">${karten[id]}</div>`).join('');
+  $('stapel-punkte').innerHTML = ids.length > 1 ? ids.map((_, i) => `<i class="${i === stapelIndex ? 'an' : ''}"></i>`).join('') : '';
+}
+function stapelWeiter() {
+  if (!stapelIds.length) return;
+  stapelIndex = (stapelIndex + 1) % stapelIds.length;
+  document.querySelectorAll('#stapel-karten .karte').forEach((k, i) => k.classList.toggle('an', i === stapelIndex));
+  document.querySelectorAll('#stapel-punkte i').forEach((k, i) => k.classList.toggle('an', i === stapelIndex));
+}
+$('stapel').addEventListener('click', () => { stapelPause = Date.now() + 45000; stapelWeiter(); });
+setInterval(() => { if (Date.now() > stapelPause && !nacht && seite === 0) stapelWeiter(); }, 14000);
+
+/* ---------- Ruhe-Zifferblatt ---------- */
+function ruheInfo() {
+  const teile = [];
+  if (wetter) teile.push(`<span>${icon(wetterSymbol(wetter.code, !wetter.tag), 22, 2)}${wetter.temperatur}°${wetter.max != null ? ` · H ${wetter.max}° T ${wetter.min}°` : ''}</span>`);
+  const e = F['einstellungen.json'];
+  if (e?.semester) {
+    const jetzt = new Date();
+    const morgen = jetzt.getHours() >= 15 || jetzt.getHours() < 5;
+    let tag = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate());
+    if (morgen && jetzt.getHours() >= 15) tag = addDays(tag, 1);
+    const t = termineAm(tag, e, F['regeln.json']?.regeln || [], F['termine.json']?.termine || []).filter((x) => morgen || !x.zeit || x.zeit >= clockText(jetzt))[0];
+    if (t) teile.push(`<span>${icon('kalender', 22, 2)}${morgen ? (jetzt.getHours() >= 15 ? 'Morgen ' : 'Heute ') : ''}${esc(t.zeit)} ${esc(t.titel)}</span>`);
+  }
+  if (wetter?.empfehlung && (wetter.morgen || new Date().getHours() < 10)) teile.push(`<span>${icon('shirt', 22, 2)}${esc(wetter.empfehlung.kleidung)}${wetter.empfehlung.schirm ? ' · Schirm' : ''}</span>`);
+  $('r-info').innerHTML = teile.join('');
 }
 
+/* ---------- Hintergrund ---------- */
+const blobCache = {};
+async function hintergrund() {
+  const p = panelEinst();
+  document.body.classList.toggle('ohne-glas', p.glas === false);
+  szene.bewegung(!nacht && p.bewegung !== false);
+  if (p.hintergrund !== 'fotos') { if (fotoListe) { fotoListe = ''; szene.setzeFotos([]); } return; }
+  try {
+    const dateien = (await ordner('bilder')).filter((d) => /\.(jpe?g|png|webp|heic)$/i.test(d.name));
+    const key = dateien.map((d) => d.sha).join();
+    if (key === fotoListe) return;
+    fotoListe = key;
+    const urls = [];
+    for (const d of dateien) {
+      if (!blobCache[d.sha]) blobCache[d.sha] = URL.createObjectURL(await rohdatei(d.path));
+      urls.push(blobCache[d.sha]);
+    }
+    szene.setzeFotos(urls, p.fotoMinuten || 15);
+  } catch { /* Landschaft bleibt */ }
+}
+
+/* ---------- Laden ---------- */
+function status(art, text) {
+  const el = $('status');
+  el.hidden = !art;
+  el.className = `ecke links status${art === 'bad' ? ' bad' : ''}`;
+  if (art) el.innerHTML = `<i></i>${esc(text)}`;
+}
 function alles() {
-  liste('studium');
-  liste('leben');
-  termine();
+  listen();
   licht();
-  budget();
+  stapelRendern();
+  ruheInfo();
 }
-
 async function laden(dateien = DATEIEN) {
   try {
     await ladeAlle(dateien);
     $('hinweis').style.display = 'none';
     const h = isoDate(new Date());
     if (tagGeladen !== h || dateien === DATEIEN) { tagGeladen = h; await routine(); }
-    status('ok', 'Aktuell ' + clockText(new Date()));
+    status(null);
   } catch (e) {
     if (e instanceof FehlerToken) { $('hinweis').style.display = 'grid'; status('bad', 'Nicht verbunden'); return; }
-    status('warn', 'Offline');
+    status('warn', 'Offline · zeige letzten Stand');
   }
   alles();
 }
 
-async function wetter() {
-  try { $('wetter').innerHTML = wetterHtml(await holeWetter(F['einstellungen.json']), 28); } catch { /* alter Stand bleibt */ }
-}
-
-$('studium').parentElement.parentElement.addEventListener('click', abhaken);
-function abhaken(ev) {
-  const row = ev.target.closest('.task');
-  if (!row || row.classList.contains('fertig')) return;
-  const id = row.dataset.id;
-  row.classList.add('fertig');
-  const jetzt = new Date().toISOString();
-  setTimeout(() => {
-    aendere('aufgaben.json', (d) => {
-      const a = d.aufgaben.find((x) => x.id === id);
-      if (a) { a.status = 'erledigt'; a.erledigt = jetzt; }
-      return d;
-    }, 'Abgehakt').catch(() => {});
-    alles();
-    const a = F['aufgaben.json'].aufgaben.find((x) => x.id === id);
-    toast(`„${a ? a.titel : 'Aufgabe'}“ erledigt`, { label: 'Rückgängig', fn: () => {
-      aendere('aufgaben.json', (d) => {
-        const b = d.aufgaben.find((x) => x.id === id);
-        if (b) { b.status = 'offen'; b.erledigt = null; }
-        return d;
-      }, 'Rückgängig').catch(() => {});
-      alles();
-    } }, 6000);
-  }, 450);
-}
-
-uhr();
-setInterval(uhr, 5000);
+zeige(0, true);
+takt();
+szenenTakt();
+setInterval(takt, 1000);
+setInterval(pixelVersatz, 180000);
 await laden();
-wetter();
+hintergrund();
+ladeWetter();
 haltWachen();
 starteZyklus(() => laden(['aufgaben.json', 'einstellungen.json', 'termine.json']), 45);
-starteZyklus(() => laden(), 300);
-starteZyklus(wetter, 900);
+starteZyklus(() => { laden(); hintergrund(); }, 300);
+starteZyklus(ladeWetter, 900);
+starteZyklus(() => { szenenTakt(); stapelRendern(); ruheInfo(); }, 60);
 let breite = innerWidth;
-addEventListener('resize', () => { if (innerWidth !== breite) { breite = innerWidth; alles(); } });
+addEventListener('resize', () => { if (innerWidth !== breite) { breite = innerWidth; listen(); } });

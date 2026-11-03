@@ -1,11 +1,11 @@
 import { lesen, aendern, FehlerToken, config } from './github.js';
-import { erzeugen } from './tasks.js';
+import { erzeugen, setzeModule } from './tasks.js';
 import { dauerFaellig } from './finance.js';
 
 export { FehlerToken, config };
 
 export const STANDARD = {
-  'einstellungen.json': { semester: { von: '', bis: '' }, pausen: [], stichtag: '', monatsbudget: 500, kleidung: null, licht: [] },
+  'einstellungen.json': { name: '', semester: { von: '', bis: '' }, pausen: [], stichtag: '', monatsbudget: 500, kleidung: null, licht: [], module: null, panel: null },
   'regeln.json': { regeln: [] },
   'aufgaben.json': { aufgaben: [] },
   'einkauf.json': { artikel: [] },
@@ -25,6 +25,7 @@ export async function ladeDatei(p) {
   if (pending[p]) return F[p];
   const r = await lesen(p);
   F[p] = r ? r.data : structuredClone(STANDARD[p]);
+  if (p === 'einstellungen.json') setzeModule(F[p].module);
   return F[p];
 }
 export async function ladeAlle(pfade) {
@@ -39,7 +40,7 @@ export function aendere(p, fn, nachricht) {
   const prom = (queues[p] || Promise.resolve()).then(job);
   queues[p] = prom.catch(() => {});
   return prom.then(
-    (r) => { pending[p]--; if (!pending[p]) F[p] = r.data; return r; },
+    (r) => { pending[p]--; if (!pending[p]) F[p] = r.data; if (p === 'einstellungen.json') setzeModule(F[p].module); return r; },
     async (e) => {
       pending[p]--;
       fehlerMelden(e);
@@ -74,3 +75,7 @@ export async function routine(jetzt = new Date()) {
   }
   await Promise.allSettled(jobs);
 }
+
+export const PANEL_STANDARD = { nachtVon: '23:00', nachtBis: '06:30', bewegung: true, glas: true, hintergrund: 'landschaft', fotoMinuten: 15 };
+export const panelEinst = () => ({ ...PANEL_STANDARD, ...(F['einstellungen.json']?.panel || {}) });
+export const lichtModi = () => F['einstellungen.json']?.licht || [];

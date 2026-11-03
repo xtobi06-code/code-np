@@ -1,8 +1,8 @@
-import { F, ladeAlle, aendere, config } from './shared/core.js';
-import { saveConfig, lesen } from './shared/github.js';
+import { F, ladeAlle, aendere, config, PANEL_STANDARD } from './shared/core.js';
+import { saveConfig, lesen, ordner, rohdatei, hochladen, loeschen } from './shared/github.js';
 import { icon, LICHT_SYMBOLE } from './shared/icons.js';
 import { katSymbol } from './shared/finance.js';
-import { modulFarbe } from './shared/tasks.js';
+import { modulFarbe, MODULE_STANDARD, setzeModule } from './shared/tasks.js';
 import { esc, uid, parseBetrag, euro } from './shared/util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -25,6 +25,8 @@ function kopie() {
     licht: structuredClone(e.licht || []),
     pausen: structuredClone(e.pausen || []),
     stufen: structuredClone(e.kleidung?.stufen || []),
+    module: Object.entries({ ...MODULE_STANDARD, ...(e.module || {}) }).map(([k, v]) => ({ k, name: v.name || '', farbe: v.farbe || '#A0A4AE' })),
+    panel: { ...PANEL_STANDARD, ...(e.panel || {}) },
   };
 }
 
@@ -55,30 +57,37 @@ function finanzenHtml() {
     <span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span><span class="lbl">${esc(k.name)}</span>
     <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €</div>`).join('')}</div>
   <div class="gruppe-titel">Dauerkosten (am Monatsersten gebucht)</div>
-  <div class="gruppe">${S.dauer.map((d, i) => `<div class="zeile">
+  <div class="gruppe">${S.dauer.map((d, i) => `<div class="zeile" style="flex-wrap:wrap;row-gap:4px">
     ${schalter(`dauer.${i}.aktiv`, d.aktiv !== false)}
-    <input class="links" style="flex:1" data-p="dauer.${i}.name" value="${esc(d.name)}" placeholder="Name">
-    <select data-p="dauer.${i}.kategorie">${S.kats.map((k) => `<option ${k.name === d.kategorie ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
-    <input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> €
-    <button class="x" data-weg="dauer.${i}" aria-label="Entfernen">${icon('x', 18)}</button></div>`).join('')}
+    <input class="links" style="flex:1 1 120px" data-p="dauer.${i}.name" value="${esc(d.name)}" placeholder="Name, z. B. Mobilfunk">
+    <button class="x" data-weg="dauer.${i}" aria-label="Entfernen">${icon('x', 18)}</button>
+    <div style="flex-basis:100%;display:flex;align-items:center;gap:10px;padding-left:63px;font-size:15px">
+      <select data-p="dauer.${i}.kategorie" style="text-align:left">${S.kats.map((k) => `<option ${k.name === d.kategorie ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
+      <span style="flex:1"></span><input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> € pro Monat</div></div>`).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="dauer">${'Dauerkosten hinzufügen'}</button></div></div>
   ${knoepfe('finanzen')}`;
 }
 
+const lichtOffen = new Set();
 function lichtHtml() {
-  return `<div class="gruppe-titel">Licht-Buttons (Panel)</div>
-  <div class="gruppe">${S.licht.map((l, i) => `<div class="regel">
-    <div class="kopf"><span class="symbol" style="background:${esc(l.farbe || '#FFD60A')};color:#111">${icon(l.symbol || 'lampe', 17, 2.2)}</span>
-      <input class="links" style="flex:1;border:0;background:none;font-size:17px;padding:0" data-p="licht.${i}.name" value="${esc(l.name)}" placeholder="Name">
-      <button class="x" style="color:var(--t2)" data-hoch="licht.${i}" aria-label="Nach oben">${icon('hoch', 18)}</button>
-      <button class="x" data-weg="licht.${i}" aria-label="Entfernen">${icon('x', 18)}</button></div>
-    <div class="koerper">
+  return `<div class="gruppe-titel"><span>Licht-Modi</span><span style="font-weight:400;color:var(--t2)">${S.licht.filter((l) => l.favorit).length} Favoriten</span></div>
+  <div class="gruppe">${S.licht.map((l, i) => {
+    const auf = lichtOffen.has(i);
+    return `<div class="regel">
+    <div class="kopf" data-licht-auf="${i}"><span class="symbol" style="background:${esc(l.farbe || '#FFD60A')};color:#111">${icon(l.symbol || 'lampe', 17, 2.2)}</span>
+      <span class="name">${esc(l.name || 'Ohne Namen')}<small>${esc(l.kurzbefehl || 'Kurzbefehl fehlt')}</small></span>
+      <button class="x" style="color:${l.favorit ? '#ffcc00' : 'var(--t3)'}" data-fav="${i}" aria-label="Favorit">${icon('stern', 21, l.favorit ? 2.6 : 2)}</button>
+      <span style="color:var(--t3)">${icon(auf ? 'hoch' : 'runter', 18)}</span></div>
+    ${auf ? `<div class="koerper">
+      <div class="reihe"><span>Name</span><input style="flex:1" data-p="licht.${i}.name" value="${esc(l.name)}" placeholder="Name"></div>
       <div class="reihe"><span>Kurzbefehl</span><input style="flex:1" data-p="licht.${i}.kurzbefehl" value="${esc(l.kurzbefehl || '')}" placeholder="Exakter Name" autocapitalize="none" autocorrect="off"></div>
       <div class="reihe"><span>Farbe</span><input type="color" class="farbe" data-p="licht.${i}.farbe" value="${esc(l.farbe || '#FFD60A')}"></div>
       <div class="reihe"><span>Symbol</span><div class="symbole">${LICHT_SYMBOLE.map((s) => `<button class="${s === l.symbol ? 'an' : ''}" data-symbol="${i}:${s}">${icon(s, 18)}</button>`).join('')}</div></div>
-    </div></div>`).join('')}
-    <div class="zeile"><button class="textknopf" style="padding:0" data-neu="licht">Button hinzufügen</button></div></div>
-  <p class="fuss">Der Name des Kurzbefehls muss genau so heißen wie in der Kurzbefehle-App, z. B. die Govee-Tap-to-Run-Aktion, die du „Zu Siri hinzugefügt“ hast.</p>
+      <div class="reihe"><button class="textknopf" style="padding:0" data-hoch="licht.${i}">Nach oben schieben</button><button class="textknopf" style="padding:0 0 0 18px;color:var(--bad)" data-weg="licht.${i}">Entfernen</button></div>
+    </div>` : ''}</div>`;
+  }).join('')}
+    <div class="zeile"><button class="textknopf" style="padding:0" data-neu="licht">Modus hinzufügen</button></div></div>
+  <p class="fuss">Stern = Favorit: Die ersten vier Favoriten stehen auf der Übersicht des Panels, alle Modi auf der Licht-Seite (nach links wischen oder „Alle“). Der Kurzbefehl muss genau so heißen wie in der Kurzbefehle-App, z. B. eine Govee-Tap-to-Run-Aktion, die du „Zu Siri hinzugefügt“ hast.</p>
   ${knoepfe('licht')}`;
 }
 
@@ -147,6 +156,38 @@ function kleidungHtml() {
   ${knoepfe('kleidung')}`;
 }
 
+function moduleHtml() {
+  return `<div class="gruppe-titel">Module</div>
+  <div class="gruppe">${S.module.map((m, i) => `<div class="zeile">
+    <input type="color" class="farbe" data-p="module.${i}.farbe" value="${esc(m.farbe)}">
+    <input class="links" style="width:64px;font-weight:600" data-p="module.${i}.k" value="${esc(m.k)}" autocapitalize="characters">
+    <input class="links" style="flex:1" data-p="module.${i}.name" value="${esc(m.name)}" placeholder="Voller Name">
+    <button class="x" data-weg="module.${i}" aria-label="Entfernen">${icon('x', 18)}</button></div>`).join('')}
+    <div class="zeile"><button class="textknopf" style="padding:0" data-neu="module">Modul hinzufügen</button></div></div>
+  <p class="fuss">Die Farben stammen aus deinem TUM-Stundenplan. Das Kürzel muss zu den Regeln passen.</p>
+  ${knoepfe('module')}`;
+}
+
+function panelHtml() {
+  const p = S.panel;
+  return `<div class="gruppe-titel">Panel</div>
+  <div class="gruppe">
+    <div class="zeile"><span class="lbl">Dein Name (Begrüßung)</span><input data-p="e.name" value="${esc(S.e.name || '')}" placeholder="Tobias"></div>
+    <div class="zeile"><span class="lbl">Nachtuhr ab</span><input type="time" data-p="panel.nachtVon" value="${esc(p.nachtVon)}"></div>
+    <div class="zeile"><span class="lbl">Nachtuhr bis</span><input type="time" data-p="panel.nachtBis" value="${esc(p.nachtBis)}"></div>
+    <div class="zeile"><span class="lbl">Bewegter Hintergrund</span>${schalter('panel.bewegung', p.bewegung !== false)}</div>
+    <div class="zeile"><span class="lbl">Glas-Effekt</span>${schalter('panel.glas', p.glas !== false)}</div>
+    <div class="zeile"><span class="lbl">Hintergrund</span><select data-p="panel.hintergrund" data-neu-zeichnen><option value="landschaft" ${p.hintergrund !== 'fotos' ? 'selected' : ''}>Landschaft</option><option value="fotos" ${p.hintergrund === 'fotos' ? 'selected' : ''}>Eigene Fotos</option></select></div>
+    ${p.hintergrund === 'fotos' ? `<div class="zeile"><span class="lbl">Foto wechseln alle</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="panel.fotoMinuten" value="${esc(p.fotoMinuten)}"> Min.</div>` : ''}
+  </div>
+  <p class="fuss">Nachts zeigt das Panel nur eine gedimmte rote Uhr, Antippen weckt es für 90 Sekunden. Läuft das iPad ruckelig oder warm, schalte Bewegung oder Glas-Effekt aus.</p>
+  ${knoepfe('panel')}
+  ${p.hintergrund === 'fotos' ? `<div class="gruppe-titel"><span>Eigene Fotos</span><span id="foto-status"></span></div>
+  <div class="gruppe"><div class="fotos" id="fotos"><span class="fuss" style="margin:0">Lade …</span></div>
+    <div class="zeile"><button class="textknopf" style="padding:0" id="foto-wahl">Fotos hinzufügen</button><input type="file" id="foto-datei" accept="image/*" multiple hidden></div></div>
+  <p class="fuss">Querformat-Fotos wirken am besten. Sie werden verkleinert und privat im Daten-Repo gespeichert.</p>` : ''}`;
+}
+
 function anleitungHtml() {
   const c = config();
   const url = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/inbox/[Dateiname].json`;
@@ -171,7 +212,59 @@ function anleitungHtml() {
 }
 
 function zeichne() {
-  $('inhalt').innerHTML = verbindungHtml() + (S ? finanzenHtml() + lichtHtml() + regelnHtml() + semesterHtml() + kleidungHtml() + anleitungHtml() : '');
+  $('inhalt').innerHTML = verbindungHtml() + (S ? finanzenHtml() + lichtHtml() + panelHtml() + regelnHtml() + moduleHtml() + semesterHtml() + kleidungHtml() + anleitungHtml() : '');
+  if (S && S.panel.hintergrund === 'fotos') fotosZeigen();
+}
+
+/* Eigene Fotos */
+const vorschau = {};
+async function fotosZeigen() {
+  const box = $('fotos');
+  if (!box) return;
+  try {
+    const liste = (await ordner('bilder')).filter((d) => /\.(jpe?g|png|webp)$/i.test(d.name));
+    if (!liste.length) { box.innerHTML = '<span class="fuss" style="margin:0">Noch keine Fotos.</span>'; return; }
+    box.innerHTML = liste.map((d) => `<div class="foto" data-pfad="${esc(d.path)}"><img alt=""><button data-foto-weg="${esc(d.path)}|${esc(d.sha)}" aria-label="Löschen">${icon('x', 14, 2.6)}</button></div>`).join('');
+    for (const d of liste) {
+      if (!vorschau[d.sha]) vorschau[d.sha] = URL.createObjectURL(await rohdatei(d.path));
+      const img = box.querySelector(`[data-pfad="${CSS.escape(d.path)}"] img`);
+      if (img) img.src = vorschau[d.sha];
+    }
+  } catch (err) { box.innerHTML = `<span class="fuss" style="margin:0">${esc(err.message)}</span>`; }
+}
+function verkleinern(datei, max = 2400) {
+  return new Promise((ok, fehler) => {
+    const img = new Image();
+    img.onload = () => {
+      const f = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * f);
+      c.height = Math.round(img.height * f);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      ok(c.toDataURL('image/jpeg', 0.84).split(',')[1]);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => fehler(new Error('Bild konnte nicht gelesen werden'));
+    img.src = URL.createObjectURL(datei);
+  });
+}
+document.addEventListener('change', async (e) => {
+  if (e.target.id !== 'foto-datei') return;
+  const dateien = [...e.target.files];
+  const st = $('foto-status');
+  for (let i = 0; i < dateien.length; i++) {
+    st.textContent = `Lade hoch ${i + 1}/${dateien.length} …`;
+    try {
+      const b64 = await verkleinern(dateien[i]);
+      await hochladen(`bilder/${Date.now().toString(36)}${i}.jpg`, b64, 'Hintergrundfoto hinzugefügt');
+    } catch (err) { st.textContent = err.message; return; }
+  }
+  st.textContent = 'Fertig';
+  fotosZeigen();
+});
+async function fotoLoeschen(wert) {
+  const [pfad, sha] = wert.split('|');
+  try { await loeschen(pfad, sha, 'Hintergrundfoto gelöscht'); fotosZeigen(); } catch (err) { $('foto-status').textContent = err.message; }
 }
 
 /* Werte setzen über Pfade wie "kats.2.budget" */
@@ -206,18 +299,23 @@ document.addEventListener('input', (e) => {
 
 const NEU = {
   dauer: () => ({ id: uid('d'), name: '', kategorie: 'Digital', betrag: 0, aktiv: true }),
-  licht: () => ({ name: 'Neu', kurzbefehl: '', symbol: 'lampe', farbe: '#FFD60A' }),
+  licht: () => ({ name: 'Neu', kurzbefehl: '', symbol: 'lampe', farbe: '#FFD60A', favorit: false }),
+  module: () => ({ k: 'NEU', name: '', farbe: '#A0A4AE' }),
   pausen: () => ({ name: 'Feiertag', von: '', bis: '' }),
   regeln: () => { const r = { id: uid('r'), modul: 'NEU', typ: 'VO', art: 'tag', tage: [1], rhythmus: 'woche', aktiv: true }; offen.add(r.id); return r; },
   stufen: () => ({ bis: 25, text: '' }),
 };
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-neu],[data-weg],[data-hoch],[data-tag],[data-symbol],[data-auf],[data-sichern],#c-sichern');
+  const t = e.target.closest('[data-neu],[data-weg],[data-hoch],[data-tag],[data-symbol],[data-auf],[data-sichern],[data-fav],[data-foto-weg],[data-licht-auf],#c-sichern,#foto-wahl');
   if (!t) return;
   if (t.id === 'c-sichern') return verbinden();
-  if (t.dataset.neu) { S[t.dataset.neu].push(NEU[t.dataset.neu]()); return zeichne(); }
-  if (t.dataset.weg) { const [k, i] = t.dataset.weg.split('.'); S[k].splice(Number(i), 1); return zeichne(); }
-  if (t.dataset.hoch) { const [k, i] = t.dataset.hoch.split('.'); const n = Number(i); if (n > 0) [S[k][n - 1], S[k][n]] = [S[k][n], S[k][n - 1]]; return zeichne(); }
+  if (t.id === 'foto-wahl') return $('foto-datei').click();
+  if (t.dataset.fotoWeg) return fotoLoeschen(t.dataset.fotoWeg);
+  if (t.dataset.fav) { const l = S.licht[Number(t.dataset.fav)]; l.favorit = !l.favorit; return zeichne(); }
+  if (t.dataset.lichtAuf) { const i = Number(t.dataset.lichtAuf); lichtOffen.has(i) ? lichtOffen.delete(i) : lichtOffen.add(i); return zeichne(); }
+  if (t.dataset.neu) { S[t.dataset.neu].push(NEU[t.dataset.neu]()); if (t.dataset.neu === 'licht') lichtOffen.add(S.licht.length - 1); return zeichne(); }
+  if (t.dataset.weg) { const [k, i] = t.dataset.weg.split('.'); S[k].splice(Number(i), 1); if (k === 'licht') lichtOffen.clear(); return zeichne(); }
+  if (t.dataset.hoch) { const [k, i] = t.dataset.hoch.split('.'); const n = Number(i); if (n > 0) [S[k][n - 1], S[k][n]] = [S[k][n], S[k][n - 1]]; if (k === 'licht' && n > 0) { lichtOffen.delete(n); lichtOffen.add(n - 1); } return zeichne(); }
   if (t.dataset.tag) {
     const [i, tag] = t.dataset.tag.split(':').map(Number);
     const r = S.regeln[i];
@@ -244,7 +342,14 @@ async function sichern(was) {
       await aendere('kategorien.json', (d) => ({ ...d, kategorien: S.kats }), 'Kategorien geändert');
       await aendere('dauerkosten.json', (d) => ({ ...d, posten: S.dauer.filter((x) => x.name) }), 'Dauerkosten geändert');
     }
-    if (was === 'licht') await aendere('einstellungen.json', (d) => ({ ...d, licht: S.licht }), 'Licht-Buttons geändert');
+    if (was === 'licht') await aendere('einstellungen.json', (d) => ({ ...d, licht: S.licht }), 'Licht-Modi geändert');
+    if (was === 'panel') await aendere('einstellungen.json', (d) => ({ ...d, name: S.e.name || '', panel: { ...S.panel, fotoMinuten: Number(S.panel.fotoMinuten) || 15 } }), 'Panel geändert');
+    if (was === 'module') {
+      const module = {};
+      S.module.filter((m) => m.k.trim()).forEach((m) => { module[m.k.trim().toUpperCase()] = { name: m.name, farbe: m.farbe }; });
+      await aendere('einstellungen.json', (d) => ({ ...d, module }), 'Module geändert');
+      setzeModule(module);
+    }
     if (was === 'semester') {
       const pausen = S.pausen.filter((p) => p.von).map((p) => ({ ...p, bis: p.bis || p.von }));
       await aendere('einstellungen.json', (d) => ({ ...d, semester: S.e.semester, pausen }), 'Semester geändert');

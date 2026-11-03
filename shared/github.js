@@ -88,3 +88,27 @@ export async function aendern(path, fn, nachricht = 'Update', standard = null) {
     }
   }
 }
+
+// Ordnerinhalt (z. B. Hintergrundfotos). Gibt [] zurück, wenn der Ordner fehlt.
+export async function ordner(path) {
+  const r = await fetch(url(path), { headers: headers(), cache: 'no-store' });
+  if (r.status === 404) return [];
+  if (r.status === 401 || r.status === 403) throw new FehlerToken('Token ungültig oder abgelaufen.');
+  if (!r.ok) throw new Error(`GitHub: Status ${r.status}`);
+  const j = await r.json();
+  return Array.isArray(j) ? j.filter((x) => x.type === 'file') : [];
+}
+export async function rohdatei(path) {
+  const r = await fetch(url(path), { headers: { ...headers(), Accept: 'application/vnd.github.raw' } });
+  if (!r.ok) throw new Error(`GitHub: Status ${r.status}`);
+  return r.blob();
+}
+export async function hochladen(path, base64, nachricht = 'Datei hinzugefügt') {
+  const r = await fetch(url(path), { method: 'PUT', headers: { ...headers(), 'Content-Type': 'application/json' }, body: JSON.stringify({ message: nachricht, content: base64 }) });
+  if (!r.ok) throw new Error(`Hochladen fehlgeschlagen (Status ${r.status})`);
+  return r.json();
+}
+export async function loeschen(path, sha, nachricht = 'Datei gelöscht') {
+  const r = await fetch(url(path), { method: 'DELETE', headers: { ...headers(), 'Content-Type': 'application/json' }, body: JSON.stringify({ message: nachricht, sha }) });
+  if (!r.ok) throw new Error(`Löschen fehlgeschlagen (Status ${r.status})`);
+}

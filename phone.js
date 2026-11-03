@@ -1,55 +1,74 @@
 import { F, ladeAlle, aendere, routine, beiFehler, FehlerToken } from './shared/core.js';
-import { offene, erledigte, metaText, titelHtml, farbeVon, istHeute } from './shared/tasks.js';
-import { uebersicht, verlauf, status, katSymbol, monatName, monatKey } from './shared/finance.js';
-import { holeWetter, wetterHtml, starteZyklus, toast } from './shared/app.js';
-import { icon } from './shared/icons.js';
-import { headerText, esc, euro, euro0, uid, isoZeit, fmtDM, parseBetrag, MON } from './shared/util.js';
+import { offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
+import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
+import { holeWetter, starteZyklus, toast } from './shared/app.js';
+import { icon, wetterSymbol } from './shared/icons.js';
+import { headerText, esc, euro, euro0, uid, isoZeit, isoDate, fmtDM, fmtWtDM, parseBetrag, MON, addDays, dunkler } from './shared/util.js';
 
 const $ = (id) => document.getElementById(id);
 const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'einkauf.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
+const TABS = ['todos', 'einkauf', 'finanzen'];
 const TITEL = { finanzen: 'Finanzen', einkauf: 'Einkauf', todos: 'To-dos' };
+const TINT = { todos: 'rgba(0, 122, 255, .17)', einkauf: 'rgba(255, 149, 0, .17)', finanzen: 'rgba(52, 199, 89, .17)' };
 
-const merk = (() => { try { return JSON.parse(localStorage.getItem('np-ansicht') || '{}'); } catch { return {}; } })();
-const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', offenKat: null, zeigeErledigt: false, ...merk, offenKat: null, zeigeErledigt: false };
-function merken() {
-  try { localStorage.setItem('np-ansicht', JSON.stringify({ tab: S.tab, finAnsicht: S.finAnsicht, zeitraum: S.zeitraum, todoListe: S.todoListe, verlaufKat: S.verlaufKat })); } catch { /* egal */ }
-}
+const LS = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
+};
+const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', ...LS.get('np-ansicht', {}), offenKat: null, zeigeErledigt: false, neuModul: '', neuFaellig: '' };
+if (!TABS.includes(S.tab)) S.tab = 'todos';
+const merken = () => LS.set('np-ansicht', { tab: S.tab, finAnsicht: S.finAnsicht, zeitraum: S.zeitraum, todoListe: S.todoListe, verlaufKat: S.verlaufKat });
+const heute = () => isoDate(new Date());
+const morgen = () => isoDate(addDays(new Date(), 1));
 
-beiFehler((e) => toast(e instanceof FehlerToken ? 'Token ungültig, bitte in den Einstellungen erneuern' : 'Speichern fehlgeschlagen, bitte Verbindung prüfen'));
+beiFehler((e) => toast(e instanceof FehlerToken ? 'Token ungültig, bitte in den Einstellungen erneuern' : 'Speichern fehlgeschlagen, Verbindung prüfen'));
 
-$('zahnrad').innerHTML = icon('regler', 18);
-$('fab').innerHTML = icon('plus', 20, 2.6);
-$('tb-finanzen').innerHTML = icon('geldbeutel', 25, 1.8) + 'Finanzen';
-$('tb-einkauf').innerHTML = icon('wagen', 25, 1.8) + 'Einkauf';
-$('tb-todos').innerHTML = icon('liste', 25, 1.8) + 'To-dos';
-$('plus-einkauf').innerHTML = icon('plus', 14, 2.5);
-$('plus-leben').innerHTML = icon('plus', 14, 2.5);
+$('zahnrad').innerHTML = icon('regler', 19, 2);
+$('neu').innerHTML = icon('plus', 21, 2.4);
+$('tb-todos').innerHTML = `${icon('liste', 24, 1.9)}To-dos`;
+$('tb-einkauf').innerHTML = `${icon('wagen', 24, 1.9)}Einkauf`;
+$('tb-finanzen').innerHTML = `${icon('geldbeutel', 24, 1.9)}Finanzen`;
+$('plus-todo').innerHTML = icon('plus', 13, 2.6);
+$('plus-einkauf').innerHTML = icon('plus', 13, 2.6);
+document.querySelectorAll('[data-zu]').forEach((b) => { b.innerHTML = icon('x', 18, 2.4); });
+$('kosten-sichern').innerHTML = icon('check', 19, 2.8);
+$('aufgabe-sichern').innerHTML = icon('check', 19, 2.8);
 
 /* ---------- Navigation ---------- */
+function segmenteSetzen() {
+  document.querySelectorAll('.segment[data-seg]').forEach((seg) => {
+    const btns = [...seg.querySelectorAll('button')];
+    const i = btns.findIndex((b) => b.dataset.v === S[seg.dataset.seg]);
+    btns.forEach((b, k) => b.classList.toggle('an', k === i));
+    seg.style.setProperty('--i', Math.max(0, i));
+  });
+}
 function zeigeTab() {
-  for (const t of Object.keys(TITEL)) {
+  for (const t of TABS) {
     $(`tab-${t}`).hidden = t !== S.tab;
     $(`tb-${t}`).classList.toggle('an', t === S.tab);
   }
+  $('tabbar').style.setProperty('--i', TABS.indexOf(S.tab));
   $('titel').textContent = TITEL[S.tab];
-  $('fab').hidden = S.tab !== 'finanzen';
-  document.querySelectorAll('.segment').forEach((seg) => {
-    seg.querySelectorAll('button').forEach((b) => b.classList.toggle('an', S[seg.dataset.seg] === b.dataset.v));
-  });
+  document.documentElement.style.setProperty('--tint-farbe', TINT[S.tab]);
+  $('neu').classList.toggle('akzent', S.tab === 'finanzen');
+  $('neu').setAttribute('aria-label', S.tab === 'finanzen' ? 'Ausgabe hinzufügen' : S.tab === 'einkauf' ? 'Artikel hinzufügen' : 'Aufgabe hinzufügen');
+  segmenteSetzen();
   $('fin-uebersicht').hidden = S.finAnsicht !== 'uebersicht';
   $('fin-verlauf').hidden = S.finAnsicht !== 'verlauf';
-  $('leben-eingabe').hidden = S.todoListe !== 'leben';
+  $('todo-input').placeholder = S.todoListe === 'studium' ? 'Neue Aufgabe fürs Studium' : 'Neue Aufgabe';
   render();
 }
-document.querySelector('.tabbar').addEventListener('click', (e) => {
+$('tabbar').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  if (S.tab === b.dataset.tab) { scrollTo({ top: 0, behavior: 'smooth' }); return; }
   S.tab = b.dataset.tab;
   merken();
   zeigeTab();
   scrollTo(0, 0);
 });
-document.querySelectorAll('.segment').forEach((seg) => seg.addEventListener('click', (e) => {
+document.querySelectorAll('.segment[data-seg]').forEach((seg) => seg.addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   S[seg.dataset.seg] = b.dataset.v;
@@ -57,93 +76,227 @@ document.querySelectorAll('.segment').forEach((seg) => seg.addEventListener('cli
   merken();
   zeigeTab();
 }));
+$('neu').onclick = () => {
+  if (S.tab === 'finanzen') kostenBlatt();
+  else (S.tab === 'einkauf' ? $('einkauf-input') : $('todo-input')).focus();
+};
 
 function render() {
+  badges();
   if (S.tab === 'finanzen') (S.finAnsicht === 'verlauf' ? renderVerlauf : renderFinanzen)();
   if (S.tab === 'einkauf') renderEinkauf();
   if (S.tab === 'todos') renderTodos();
 }
+function badges() {
+  const auf = F['aufgaben.json']?.aufgaben || [];
+  const dringend = auf.filter((a) => a.status === 'offen' && (ueberfaellig(a) || (istHeute(a) && (a.faellig || a.regel)))).length;
+  const einkauf = (F['einkauf.json']?.artikel || []).filter((a) => a.status === 'offen').length;
+  const setze = (id, n) => {
+    const b = $(id);
+    let p = b.querySelector('.punkt');
+    if (!n) { p?.remove(); return; }
+    if (!p) { p = document.createElement('span'); p.className = 'punkt'; b.appendChild(p); }
+    p.textContent = n;
+  };
+  setze('tb-todos', dringend);
+  setze('tb-einkauf', einkauf);
+}
 
 /* ---------- To-dos ---------- */
 function taskHtml(a, erl = false) {
-  const meta = erl ? (a.erledigt ? fmtDM(a.erledigt) : '') : metaText(a);
-  const heute = !erl && istHeute(a) && a.liste === 'studium';
-  return `<div class="zeile task${erl ? ' erl' : ''}" style="--c:${farbeVon(a)}" data-id="${esc(a.id)}">
-    <button class="kreis${erl ? ' an' : ''}" data-aktion="${erl ? 'wieder' : 'erledigt'}" aria-label="${erl ? 'Wiederherstellen' : 'Erledigt'}">${icon('check', 14, 3)}</button>
-    <span class="haupt titel">${titelHtml(a, esc)}</span>${meta ? `<span class="neben${heute ? ' heute' : ''}">${heute ? 'Heute' : esc(meta)}</span>` : ''}</div>`;
+  let meta = erl ? (a.erledigt ? fmtDM(a.erledigt) : '') : metaText(a);
+  const ueber = !erl && ueberfaellig(a);
+  const heuteTag = !erl && istHeute(a) && (a.faellig || a.regel);
+  if (heuteTag) meta = 'Heute';
+  if (ueber) meta = fmtWtDM(a.faellig);
+  return `<div class="zeile task${erl ? ' erl' : ''}" style="${farbStil(farbeVon(a))}" data-id="${esc(a.id)}">
+    <button class="kreis${erl ? ' an' : ''}" data-aktion="${erl ? 'wieder' : 'erledigt'}" aria-label="${erl ? 'Wiederherstellen' : 'Erledigt'}">${icon('check', 14, 3.2)}</button>
+    <span class="haupt titel" data-aktion="bearbeiten">${titelHtml(a)}</span>${meta ? `<span class="neben${heuteTag ? ' heute' : ''}${ueber ? ' ueber' : ''}">${esc(meta)}</span>` : ''}</div>`;
+}
+function gruppe(titel, liste) {
+  if (!liste.length) return '';
+  return `<div class="gruppe-titel"><span>${titel}</span><span class="zahl">${liste.length}</span></div><div class="gruppe">${liste.map((a) => taskHtml(a)).join('')}</div>`;
 }
 function renderTodos() {
   const alle = F['aufgaben.json']?.aufgaben || [];
   const liste = S.todoListe;
   const auf = offene(alle, liste);
-  let html = '';
-  if (!auf.length) {
-    html = `<div class="gruppe"><div class="leer">${icon('check', 30, 2.5)}Alles erledigt</div></div>`;
-  } else if (liste === 'studium') {
-    const h = auf.filter((a) => istHeute(a));
-    const r = auf.filter((a) => !istHeute(a));
-    if (h.length) html += `<div class="gruppe-titel"><span>Heute</span><span>${h.length}</span></div><div class="gruppe">${h.map((a) => taskHtml(a)).join('')}</div>`;
-    if (r.length) html += `<div class="gruppe-titel"><span>Offen</span><span>${r.length}</span></div><div class="gruppe">${r.map((a) => taskHtml(a)).join('')}</div>`;
-  } else {
-    html = `<div class="gruppe">${auf.map((a) => taskHtml(a)).join('')}</div>`;
-  }
-  $('todo-liste').innerHTML = html;
+  const ueber = auf.filter((a) => ueberfaellig(a));
+  const h = auf.filter((a) => !ueberfaellig(a) && istHeute(a) && (a.faellig || a.regel));
+  const rest = auf.filter((a) => !ueber.includes(a) && !h.includes(a));
+  $('todo-liste').innerHTML = auf.length
+    ? gruppe('Überfällig', ueber) + gruppe('Heute', h) + gruppe(h.length || ueber.length ? 'Offen' : 'Alle offenen', rest)
+    : `<div class="gruppe"><div class="leer">${icon('check', 40, 2.4)}<b>Alles erledigt</b>${liste === 'studium' ? 'Neue Aufgaben entstehen automatisch nach Stundenplan.' : 'Nichts offen.'}</div></div>`;
   const erl = erledigte(alle, liste);
+  $('erledigt-umschalten').hidden = !erl.length;
   $('erledigt-umschalten').textContent = S.zeigeErledigt ? 'Erledigte ausblenden' : `Erledigte anzeigen (${erl.length})`;
-  $('erledigt-liste').innerHTML = S.zeigeErledigt && erl.length
-    ? `<div class="gruppe">${erl.slice(0, 60).map((a) => taskHtml(a, true)).join('')}</div>` : '';
+  $('erledigt-liste').innerHTML = S.zeigeErledigt && erl.length ? `<div class="gruppe">${erl.slice(0, 80).map((a) => taskHtml(a, true)).join('')}</div>` : '';
+  zubehoer();
 }
 $('erledigt-umschalten').onclick = () => { S.zeigeErledigt = !S.zeigeErledigt; renderTodos(); };
-function setzeStatus(id, offen) {
+
+function setzeStatus(id, neu) {
   const zeit = new Date().toISOString();
   return aendere('aufgaben.json', (d) => {
     const a = d.aufgaben.find((x) => x.id === id);
-    if (a) { a.status = offen ? 'offen' : 'erledigt'; a.erledigt = offen ? null : zeit; }
+    if (a) { a.status = neu; a.erledigt = neu === 'erledigt' ? zeit : null; }
     return d;
-  }, offen ? 'Wiederhergestellt' : 'Abgehakt').catch(() => {});
+  }, neu === 'erledigt' ? 'Abgehakt' : neu === 'geloescht' ? 'Gelöscht' : 'Wiederhergestellt').catch(() => {});
 }
 $('tab-todos').addEventListener('click', (e) => {
   const b = e.target.closest('[data-aktion]');
   if (!b) return;
   const id = b.closest('[data-id]').dataset.id;
+  if (b.dataset.aktion === 'bearbeiten') { aufgabeBlatt(id); return; }
   if (b.dataset.aktion === 'erledigt') {
     b.classList.add('an');
     setTimeout(() => {
-      setzeStatus(id, false);
+      setzeStatus(id, 'erledigt');
       renderTodos();
-      toast('Erledigt', { label: 'Rückgängig', fn: () => { setzeStatus(id, true); renderTodos(); } });
-    }, 300);
+      badges();
+      toast('Erledigt', { label: 'Rückgängig', fn: () => { setzeStatus(id, 'offen'); renderTodos(); badges(); } });
+    }, 280);
   } else {
-    setzeStatus(id, true);
+    setzeStatus(id, 'offen');
     renderTodos();
+    badges();
   }
 });
-$('leben-input').addEventListener('keydown', (e) => {
+
+// Eingabe mit Zubehör (Modul und Fälligkeit)
+function faelligChips(wert, id) {
+  const opt = [['', 'Kein Datum'], [heute(), 'Heute'], [morgen(), 'Morgen']];
+  const eigen = wert && wert !== heute() && wert !== morgen();
+  return opt.map(([v, t]) => `<button class="chip${wert === v ? ' an' : ''}" data-faellig="${v}">${t}</button>`).join('')
+    + `<label class="chip${eigen ? ' an' : ''}" style="position:relative">${icon('kalender', 15, 2.2)}${eigen ? fmtWtDM(wert) : 'Datum'}<input type="date" data-datum="${id}" value="${eigen ? wert : ''}" style="position:absolute;inset:0;opacity:0"></label>`;
+}
+function modulChips(wert) {
+  return [['', 'Ohne Modul']].concat(Object.keys(module()).map((k) => [k, k])).map(([v, t]) =>
+    `<button class="chip${wert === v ? ' an' : ''}" data-modul="${v}" style="${v ? `--c:${dunkler(modulFarbe(v), 0.5)}` : ''}">${esc(t)}</button>`).join('');
+}
+function zubehoer() {
+  $('todo-module').hidden = S.todoListe !== 'studium';
+  $('todo-module').innerHTML = modulChips(S.neuModul);
+  $('todo-faellig').innerHTML = faelligChips(S.neuFaellig, 'neu');
+}
+const zub = $('todo-zubehoer');
+$('todo-input').addEventListener('focus', () => { zub.hidden = false; zubehoer(); });
+$('todo-input').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('todo-input') && !zub.contains(document.activeElement)) zub.hidden = true; }, 150));
+zub.addEventListener('pointerdown', (e) => { if (!e.target.closest('input')) e.preventDefault(); });
+zub.addEventListener('click', (e) => {
+  const m = e.target.closest('[data-modul]');
+  const f = e.target.closest('[data-faellig]');
+  if (m) S.neuModul = m.dataset.modul;
+  if (f) S.neuFaellig = f.dataset.faellig;
+  zubehoer();
+});
+zub.addEventListener('change', (e) => {
+  if (e.target.dataset.datum === 'neu') { S.neuFaellig = e.target.value; zubehoer(); $('todo-input').focus(); }
+});
+$('todo-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
   const titel = e.target.value.trim();
   if (!titel) return;
   e.target.value = '';
-  const neu = { id: uid('l'), liste: 'leben', titel, status: 'offen', erstellt: isoZeit(new Date()), erledigt: null };
+  const neu = { id: uid('a'), liste: S.todoListe, titel, status: 'offen', erstellt: isoZeit(new Date()), erledigt: null };
+  if (S.todoListe === 'studium' && S.neuModul) neu.modul = S.neuModul;
+  if (S.neuFaellig) neu.faellig = S.neuFaellig;
+  S.neuFaellig = '';
   aendere('aufgaben.json', (d) => { if (!d.aufgaben.some((a) => a.id === neu.id)) d.aufgaben.push(neu); return d; }, 'Neue Aufgabe').catch(() => {});
   renderTodos();
+  badges();
 });
 
+// Aufgabe bearbeiten
+let bearbeite = null;
+function aufgabeBlatt(id) {
+  const a = (F['aufgaben.json']?.aufgaben || []).find((x) => x.id === id);
+  if (!a) return;
+  bearbeite = { id, titel: a.titel, liste: a.liste, modul: a.modul || '', faellig: a.faellig || '', regel: !!a.regel };
+  $('aufgabe-titel').value = a.titel;
+  aufgabeZeichnen();
+  oeffne('blatt-aufgabe');
+}
+function aufgabeZeichnen() {
+  const b = bearbeite;
+  const seg = $('aufgabe-liste');
+  [...seg.querySelectorAll('button')].forEach((x, i) => { x.classList.toggle('an', x.dataset.v === b.liste); if (x.dataset.v === b.liste) seg.style.setProperty('--i', i); });
+  $('aufgabe-modul-box').hidden = b.liste !== 'studium';
+  $('aufgabe-module').innerHTML = modulChips(b.modul);
+  $('aufgabe-faellig').innerHTML = faelligChips(b.faellig, 'bearbeiten');
+  $('aufgabe-loeschen').textContent = b.regel ? 'Aufgabe ausblenden' : 'Aufgabe löschen';
+}
+$('aufgabe-liste').addEventListener('click', (e) => { const x = e.target.closest('button'); if (x) { bearbeite.liste = x.dataset.v; aufgabeZeichnen(); } });
+$('blatt-aufgabe').addEventListener('click', (e) => {
+  const m = e.target.closest('[data-modul]');
+  const f = e.target.closest('[data-faellig]');
+  if (m) { bearbeite.modul = m.dataset.modul; aufgabeZeichnen(); }
+  if (f) { bearbeite.faellig = f.dataset.faellig; aufgabeZeichnen(); }
+});
+$('blatt-aufgabe').addEventListener('change', (e) => { if (e.target.dataset.datum === 'bearbeiten') { bearbeite.faellig = e.target.value; aufgabeZeichnen(); } });
+$('aufgabe-sichern').onclick = () => {
+  const b = bearbeite;
+  const titel = $('aufgabe-titel').value.trim() || b.titel;
+  aendere('aufgaben.json', (d) => {
+    const a = d.aufgaben.find((x) => x.id === b.id);
+    if (a) {
+      a.titel = titel;
+      a.liste = b.liste;
+      if (b.liste === 'studium' && b.modul) a.modul = b.modul; else if (!a.regel) delete a.modul;
+      if (b.faellig) a.faellig = b.faellig; else delete a.faellig;
+    }
+    return d;
+  }, 'Aufgabe geändert').catch(() => {});
+  schliesse();
+  render();
+};
+$('aufgabe-loeschen').onclick = () => {
+  const id = bearbeite.id;
+  setzeStatus(id, 'geloescht');
+  schliesse();
+  render();
+  toast('Gelöscht', { label: 'Rückgängig', fn: () => { setzeStatus(id, 'offen'); render(); } });
+};
+
 /* ---------- Einkauf ---------- */
+const norm = (t) => t.trim().toLowerCase();
 function renderEinkauf() {
-  const art = (F['einkauf.json']?.artikel || []).filter((a) => a.status !== 'archiv');
+  const alle = F['einkauf.json']?.artikel || [];
+  const art = alle.filter((a) => a.status !== 'archiv');
   const offen = art.filter((a) => a.status === 'offen').sort((a, b) => (a.zeit || '').localeCompare(b.zeit || ''));
   const erl = art.filter((a) => a.status === 'erledigt').sort((a, b) => (b.erledigt || '').localeCompare(a.erledigt || ''));
-  $('einkauf-liste').innerHTML = [...offen, ...erl].map((a) => {
+  const zeile = (a) => {
     const e = a.status === 'erledigt';
-    return `<div class="zeile artikel${e ? ' erl' : ''}" data-id="${esc(a.id)}" style="--c:var(--accent)">
-      <button class="kreis${e ? ' an' : ''}" aria-label="Abhaken">${icon('check', 14, 3)}</button><span class="haupt">${esc(a.text)}</span></div>`;
-  }).join('');
+    return `<div class="zeile artikel${e ? ' erl' : ''}" data-id="${esc(a.id)}" style="--c:#ff9500;--cd:#e08600">
+      <button class="kreis${e ? ' an' : ''}" aria-label="Abhaken">${icon('check', 14, 3.2)}</button><span class="haupt">${esc(a.text)}</span></div>`;
+  };
+  $('einkauf-liste').innerHTML = offen.length || erl.length
+    ? (offen.length ? `<div class="gruppe-titel"><span>Einkaufsliste</span><span class="zahl">${offen.length}</span></div><div class="gruppe">${offen.map(zeile).join('')}</div>` : '')
+      + (erl.length ? `<div class="gruppe-titel"><span>Im Wagen</span><span class="zahl">${erl.length}</span></div><div class="gruppe">${erl.map(zeile).join('')}</div>` : '')
+    : `<div class="gruppe"><div class="leer">${icon('wagen', 40, 2)}<b>Liste ist leer</b>Tippe oben einen Artikel ein, mehrere mit Komma trennen.</div></div>`;
   $('einkauf-aufraeumen').hidden = !erl.length;
+  // Vorschläge aus der Historie
+  const offenSet = new Set(offen.map((a) => norm(a.text)));
+  const zaehler = {};
+  for (const a of alle) {
+    const k = norm(a.text);
+    if (!k || offenSet.has(k)) continue;
+    const z = zaehler[k] || (zaehler[k] = { text: a.text.trim(), n: 0, zeit: '' });
+    z.n++;
+    if ((a.zeit || '') > z.zeit) z.zeit = a.zeit || '';
+  }
+  const vor = Object.values(zaehler).sort((a, b) => b.n - a.n || b.zeit.localeCompare(a.zeit)).slice(0, 12);
+  $('vorschlaege').innerHTML = vor.length ? `<div class="unterlabel">Schnell hinzufügen</div><div class="chips">${vor.map((v) => `<button class="chip" data-vorschlag="${esc(v.text)}">${icon('plus', 13, 2.6)}${esc(v.text)}</button>`).join('')}</div>` : '';
 }
 function einkaufAendern(fn, msg) {
   aendere('einkauf.json', fn, msg).catch(() => {});
   renderEinkauf();
+  badges();
+}
+function artikelNeu(texte) {
+  const neu = texte.map((text) => ({ id: uid('e'), text, status: 'offen', zeit: isoZeit(new Date()), erledigt: null }));
+  einkaufAendern((d) => { const ids = new Set(d.artikel.map((a) => a.id)); d.artikel.push(...neu.filter((a) => !ids.has(a.id))); return d; }, 'Einkauf hinzugefügt');
 }
 $('einkauf-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -151,9 +304,9 @@ $('einkauf-input').addEventListener('keydown', (e) => {
   const teile = e.target.value.split(',').map((t) => t.trim()).filter(Boolean);
   if (!teile.length) return;
   e.target.value = '';
-  const neu = teile.map((text) => ({ id: uid('e'), text, status: 'offen', zeit: isoZeit(new Date()), erledigt: null }));
-  einkaufAendern((d) => { const ids = new Set(d.artikel.map((a) => a.id)); d.artikel.push(...neu.filter((a) => !ids.has(a.id))); return d; }, 'Einkauf hinzugefügt');
+  artikelNeu(teile);
 });
+$('vorschlaege').addEventListener('click', (e) => { const b = e.target.closest('[data-vorschlag]'); if (b) artikelNeu([b.dataset.vorschlag]); });
 $('einkauf-liste').addEventListener('click', (e) => {
   const zeile = e.target.closest('[data-id]');
   if (!zeile) return;
@@ -173,47 +326,56 @@ $('einkauf-aufraeumen').onclick = () => {
 
 /* ---------- Finanzen ---------- */
 const kats = () => F['kategorien.json']?.kategorien || [];
+const katVon = (n) => kats().find((k) => k.name === n) || { name: n, farbe: '#8e8e93' };
+function ring(anteil, farbe, groesse = 64) {
+  const R = 26;
+  const U = 2 * Math.PI * R;
+  return `<svg class="ring" viewBox="0 0 64 64" width="${groesse}" height="${groesse}"><circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--karte2)" stroke-width="7"/>
+    <circle cx="32" cy="32" r="${R}" fill="none" stroke="${farbe}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(Math.min(1, anteil) * U).toFixed(1)} ${U.toFixed(1)}" transform="rotate(-90 32 32)"/>
+    <text x="32" y="37" text-anchor="middle">${Math.round(anteil * 100)}%</text></svg>`;
+}
 function renderFinanzen() {
   const k = kats();
-  if (!k.length) { $('fin-held').innerHTML = '<div class="unter">Keine Kategorien angelegt.</div>'; $('fin-kat').innerHTML = ''; return; }
+  if (!k.length) { $('fin-held').innerHTML = '<div class="unter">Keine Kategorien angelegt.</div>'; $('fin-kat').innerHTML = ''; $('fin-letzte').innerHTML = ''; return; }
   const u = uebersicht(F['kosten.json'], k, F['einstellungen.json'], S.zeitraum);
   const basis = Math.max(u.budget, u.wert) || 1;
   const stapel = u.kats.filter((x) => x.wert > 0).map((x) => `<span style="width:${(x.wert / basis) * 100}%;background:${x.farbe}"></span>`).join('');
+  const st = status(u.wert, u.budget);
+  const farbe = st === 'bad' ? 'var(--bad)' : st === 'warn' ? 'var(--warn)' : 'var(--ok)';
   if (u.N === 1) {
     const ueber = u.rest < 0;
-    $('fin-held').innerHTML = `<div class="klein">${ueber ? 'Über Budget' : `Übrig im ${monatName(monatKey(new Date()))}`}</div>
+    $('fin-held').innerHTML = `<div class="reihe"><div><div class="klein">${ueber ? 'Über Budget' : `Übrig im ${monatName(monatKey(new Date()))}`}</div>
       <div class="gross" style="${ueber ? 'color:var(--bad)' : ''}">${euro(Math.abs(u.rest))}</div>
-      <div class="unter">${ueber ? '' : `<b>${euro(u.restTag)}</b> pro Tag · `}${euro(u.summe)} von ${euro0(u.budget)}</div>
-      <div class="stapel">${stapel}</div>`;
+      <div class="unter">${ueber ? 'Ab jetzt bitte sparsam.' : `<b>${euro(u.restTag)}</b> pro Tag verfügbar`}</div></div>${ring(u.budget ? u.summe / u.budget : 0, farbe)}</div>
+      <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">${euro(u.summe)} von ${euro0(u.budget)} ausgegeben</div>`;
     $('fin-hinweis').textContent = 'Ausgaben / Budget';
   } else {
-    $('fin-held').innerHTML = `<div class="klein">Ø pro Monat</div>
+    $('fin-held').innerHTML = `<div class="reihe"><div><div class="klein">Ø pro Monat</div>
       <div class="gross" style="${u.wert > u.budget ? 'color:var(--bad)' : ''}">${euro(u.wert)}</div>
-      <div class="unter"><b>${euro(u.summe)}</b> gesamt über ${u.n} ${u.n === 1 ? 'Monat' : 'Monate'} · Budget ${euro0(u.budget)}</div>
-      <div class="stapel">${stapel}</div>`;
+      <div class="unter"><b>${euro(u.summe)}</b> gesamt · ${u.n} ${u.n === 1 ? 'Monat' : 'Monate'}</div></div>${ring(u.budget ? u.wert / u.budget : 0, farbe)}</div>
+      <div class="stapelbalken">${stapel}</div><div class="unter" style="margin-top:8px">Budget ${euro0(u.budget)} pro Monat</div>`;
     $('fin-hinweis').textContent = 'Ø pro Monat / Budget';
   }
   $('fin-kat').innerHTML = u.kats.map((x) => {
-    const st = status(x.wert, Number(x.budget));
+    const s = status(x.wert, Number(x.budget));
     const breite = x.budget ? Math.min(100, (x.wert / x.budget) * 100) : (x.wert ? 100 : 0);
     const offen = S.offenKat === x.name;
     const eintraege = offen ? `<div class="eintraege">${x.eintraege.length ? x.eintraege.map((b) => `
-      <div class="eintrag" data-buchung="${esc(b.id)}"><span class="neben">${fmtDM(b.datum)}</span><span class="haupt">${esc(b.text || x.name)}</span><span class="neben">${euro(b.betrag)}</span>
-      <button data-storno="${esc(b.id)}" aria-label="Löschen">${icon('x', 16)}</button></div>`).join('') : '<div class="eintrag"><span class="haupt neben">Keine Einträge</span></div>'}</div>` : '';
+      <div class="eintrag" data-buchung="${esc(b.id)}"><span class="neben">${fmtDM(b.datum)}</span><span class="haupt">${esc(b.text || x.name)}</span><span class="neben">${euro(b.betrag)}</span></div>`).join('') : '<div class="eintrag"><span class="haupt neben">Keine Einträge in diesem Zeitraum</span></div>'}</div>` : '';
     return `<div class="zeile kat" data-kat="${esc(x.name)}"><span class="symbol" style="background:${x.farbe}">${icon(katSymbol(x.name), 17, 2.2)}</span>
       <div class="haupt"><div class="oben"><span>${esc(x.name)}</span><span class="betrag">${euro(x.wert)}${x.budget ? ` <small>/ ${euro0(x.budget)}</small>` : ''}</span></div>
-      <div class="balken"><span class="${st}" style="width:${breite}%"></span></div></div></div>${eintraege}`;
+      <div class="balken"><span class="${s}" style="width:${breite}%"></span></div></div></div>${eintraege}`;
   }).join('');
+  const letzte = aktive(F['kosten.json']).filter((b) => b.quelle !== 'dauer').sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 5);
+  $('fin-letzte').innerHTML = letzte.length ? `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe">${letzte.map((b) => {
+    const kk = katVon(b.kategorie);
+    return `<div class="zeile buchung" data-buchung="${esc(b.id)}"><span class="symbol" style="background:${kk.farbe}">${icon(katSymbol(kk.name), 17, 2.2)}</span>
+      <div class="haupt"><div>${esc(b.text || kk.name)}</div><div class="unter">${esc(fmtWtDM(b.datum))}${b.text ? ` · ${esc(kk.name)}` : ''}</div></div><span class="betrag">${euro(b.betrag)}</span></div>`;
+  }).join('')}</div>` : '';
 }
-$('fin-kat').addEventListener('click', (e) => {
-  const st = e.target.closest('[data-storno]');
-  if (st) {
-    const id = st.dataset.storno;
-    const setze = (v) => { aendere('kosten.json', (d) => { const b = d.buchungen.find((x) => x.id === id); if (b) b.storniert = v; return d; }, v ? 'Buchung gelöscht' : 'Buchung wiederhergestellt').catch(() => {}); renderFinanzen(); };
-    setze(true);
-    toast('Buchung gelöscht', { label: 'Rückgängig', fn: () => setze(false) });
-    return;
-  }
+$('tab-finanzen').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-buchung]');
+  if (b) { kostenBlatt(b.dataset.buchung); return; }
   const z = e.target.closest('[data-kat]');
   if (!z) return;
   S.offenKat = S.offenKat === z.dataset.kat ? null : z.dataset.kat;
@@ -222,32 +384,38 @@ $('fin-kat').addEventListener('click', (e) => {
 
 function renderVerlauf() {
   const k = kats();
-  $('verlauf-chips').innerHTML = [{ name: '', farbe: '#007aff' }, ...k].map((x) =>
+  $('verlauf-chips').innerHTML = [{ name: '', farbe: 'var(--accent)' }, ...k].map((x) =>
     `<button class="chip${S.verlaufKat === x.name ? ' an' : ''}" style="--c:${x.farbe}" data-vk="${esc(x.name)}">${esc(x.name || 'Gesamt')}</button>`).join('');
   const daten = verlauf(F['kosten.json'], S.verlaufKat || null);
   const kat = k.find((x) => x.name === S.verlaufKat);
   const budget = kat ? Number(kat.budget) || 0 : (Number(F['einstellungen.json']?.monatsbudget) || k.reduce((s, x) => s + (Number(x.budget) || 0), 0));
   const farbe = kat ? kat.farbe : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#007aff';
-  const W = 340; const H = 190; const L = 40; const R = 10; const T = 12; const B = 24;
+  const W = 340; const H = 190; const L = 40; const R = 12; const T = 12; const B = 24;
   const max = Math.max(budget, ...daten.map((d) => d.wert), 10) * 1.12;
   const n = daten.length;
   const x = (i) => (n === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (n - 1));
   const y = (v) => T + (H - T - B) * (1 - v / max);
   const stufe = [10, 20, 25, 50, 100, 200, 250, 500, 1000].find((s) => max / s <= 5) || 1000;
   let g = '';
-  for (let v = 0; v <= max; v += stufe) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" stroke-opacity=".12"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
-  const pfad = daten.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d.wert).toFixed(1)}`).join(' ');
+  for (let v = 0; v <= max; v += stufe) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" stroke-opacity=".1"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  // weiche Kurve
+  const P = daten.map((d, i) => [x(i), y(d.wert)]);
+  let pfad = P.length ? `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}` : '';
+  for (let i = 1; i < P.length; i++) {
+    const [x0, y0] = P[i - 1]; const [x1, y1] = P[i]; const m = (x1 - x0) / 2;
+    pfad += ` C${(x0 + m).toFixed(1)},${y0.toFixed(1)} ${(x1 - m).toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
   const flaeche = n > 1 ? `${pfad} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z` : '';
-  const labels = daten.map((d, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${MON[Number(d.monat.slice(5)) - 1].slice(0, 3)}</text>`).join('');
-  const punkte = daten.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.wert)}" r="3.5" fill="${farbe}"/>`).join('');
-  const bl = budget ? `<line x1="${L}" x2="${W - R}" y1="${y(budget)}" y2="${y(budget)}" stroke="${farbe}" stroke-dasharray="4 4" stroke-opacity=".7"/>` : '';
-  $('verlauf-svg').innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="color:var(--text)">${g}${bl}
-    ${flaeche ? `<path d="${flaeche}" fill="${farbe}" fill-opacity=".12"/>` : ''}<path d="${pfad}" fill="none" stroke="${farbe}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${punkte}${labels}</svg>`;
+  const labels = daten.map((d, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${MON[Number(d.monat.slice(5)) - 1]}</text>`).join('');
+  const punkte = daten.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.wert)}" r="${i === n - 1 ? 5 : 3.5}" fill="${i === n - 1 ? 'var(--karte)' : farbe}" stroke="${farbe}" stroke-width="${i === n - 1 ? 3 : 0}"/>`).join('');
+  const bl = budget ? `<line x1="${L}" x2="${W - R}" y1="${y(budget)}" y2="${y(budget)}" stroke="${farbe}" stroke-dasharray="4 5" stroke-opacity=".6"/><text x="${W - R}" y="${y(budget) - 6}" text-anchor="end">Budget</text>` : '';
+  $('verlauf-svg').innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="color:var(--text)"><defs><linearGradient id="vg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${farbe}" stop-opacity=".28"/><stop offset="1" stop-color="${farbe}" stop-opacity="0"/></linearGradient></defs>${g}${bl}
+    ${flaeche ? `<path d="${flaeche}" fill="url(#vg)"/>` : ''}<path d="${pfad}" fill="none" stroke="${farbe}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>${punkte}${labels}</svg>`;
   const werte = daten.map((d) => d.wert);
-  const abgeschlossen = werte.slice(0, -1);
-  const schnitt = abgeschlossen.length ? abgeschlossen.reduce((a, b) => a + b, 0) / abgeschlossen.length : werte[werte.length - 1] || 0;
+  const voll = werte.slice(0, -1);
+  const schnitt = voll.length ? voll.reduce((a, b) => a + b, 0) / voll.length : werte[werte.length - 1] || 0;
   $('verlauf-zahlen').innerHTML = `<div class="kennzahl"><div class="k">Dieser Monat</div><div class="v">${euro(werte[werte.length - 1] || 0)}</div></div>
-    <div class="kennzahl"><div class="k">${abgeschlossen.length ? `Ø ${abgeschlossen.length} volle Mon.` : 'Ø pro Monat'}</div><div class="v">${euro(schnitt)}</div></div>`;
+    <div class="kennzahl"><div class="k">${voll.length ? `Ø ${voll.length} volle Monate` : 'Ø pro Monat'}</div><div class="v">${euro(schnitt)}</div></div>`;
 }
 $('verlauf-chips').addEventListener('click', (e) => {
   const b = e.target.closest('[data-vk]');
@@ -257,62 +425,101 @@ $('verlauf-chips').addEventListener('click', (e) => {
   renderVerlauf();
 });
 
-/* ---------- Neue Ausgabe ---------- */
-let wahl = null;
-function blatt(an) {
-  $('blatt').classList.toggle('an', an);
-  $('schleier').classList.toggle('an', an);
-  if (an) {
-    wahl = null;
-    $('betrag').value = '';
-    $('notiz').value = '';
-    $('blatt-fehler').textContent = '';
-    $('katwahl').innerHTML = kats().map((k) => `<button style="--c:${k.farbe}" data-k="${esc(k.name)}"><span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span>${esc(k.name)}</button>`).join('');
-  } else {
-    document.activeElement?.blur();
-  }
+/* ---------- Sheets ---------- */
+let offenesBlatt = null;
+function oeffne(id) {
+  offenesBlatt = id;
+  $(id).classList.add('an');
+  $('schleier').classList.add('an');
 }
-$('fab').onclick = () => blatt(true);
-$('schleier').onclick = () => blatt(false);
-$('blatt-abbrechen').onclick = () => blatt(false);
+function schliesse() {
+  if (!offenesBlatt) return;
+  $(offenesBlatt).classList.remove('an');
+  $('schleier').classList.remove('an');
+  offenesBlatt = null;
+  document.activeElement?.blur();
+}
+$('schleier').onclick = schliesse;
+document.querySelectorAll('[data-zu]').forEach((b) => { b.onclick = schliesse; });
+
+let wahl = null;
+let kostenId = null;
+function katwahl() {
+  $('katwahl').innerHTML = kats().map((k) => `<button style="--c:${k.farbe}" data-k="${esc(k.name)}" class="${k.name === wahl ? 'an' : ''}"><span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span>${esc(k.name)}</button>`).join('');
+}
+function kostenBlatt(id = null) {
+  const b = id ? aktive(F['kosten.json']).find((x) => x.id === id) : null;
+  kostenId = b ? b.id : null;
+  wahl = b ? b.kategorie : null;
+  $('kosten-titel').textContent = b ? 'Ausgabe bearbeiten' : 'Neue Ausgabe';
+  $('betrag').value = b ? String(b.betrag).replace('.', ',') : '';
+  $('notiz').value = b ? b.text || '' : '';
+  $('kosten-datum').value = b ? b.datum.slice(0, 10) : heute();
+  $('kosten-loeschen').hidden = !b;
+  $('kosten-fehler').textContent = '';
+  katwahl();
+  oeffne('blatt-kosten');
+  if (!b) setTimeout(() => $('betrag').focus(), 350);
+}
 $('katwahl').addEventListener('click', (e) => {
   const b = e.target.closest('[data-k]');
   if (!b) return;
   wahl = b.dataset.k;
-  $('katwahl').querySelectorAll('button').forEach((x) => x.classList.toggle('an', x === b));
-  $('notiz').placeholder = wahl === 'Sonstiges' ? 'Wofür? (nötig)' : 'Notiz (optional)';
-  $('blatt-fehler').textContent = '';
-  $('betrag').focus();
+  katwahl();
+  $('notiz').placeholder = wahl === 'Sonstiges' ? 'Wofür? (nötig bei Sonstiges)' : 'Notiz (optional)';
+  $('kosten-fehler').textContent = '';
 });
-[$('betrag'), $('notiz')].forEach((el) => el.addEventListener('input', () => { $('blatt-fehler').textContent = ''; }));
-$('blatt-sichern').onclick = () => {
+[$('betrag'), $('notiz')].forEach((el) => el.addEventListener('input', () => { $('kosten-fehler').textContent = ''; }));
+$('kosten-sichern').onclick = () => {
   const betrag = parseBetrag($('betrag').value);
   const text = $('notiz').value.trim();
-  if (!wahl) { $('blatt-fehler').textContent = 'Wähle eine Kategorie.'; return; }
-  if (!(betrag > 0)) { $('blatt-fehler').textContent = 'Gib einen Betrag ein.'; return; }
-  if (wahl === 'Sonstiges' && !text) { $('blatt-fehler').textContent = 'Bei Sonstiges bitte angeben, wofür.'; return; }
-  const b = { id: uid('b'), datum: isoZeit(new Date()), kategorie: wahl, betrag, text, quelle: 'app' };
-  aendere('kosten.json', (d) => { if (!d.buchungen.some((x) => x.id === b.id)) d.buchungen.push(b); return d; }, `Ausgabe ${wahl}`).catch(() => {});
-  blatt(false);
+  const tag = $('kosten-datum').value || heute();
+  if (!(betrag > 0)) { $('kosten-fehler').textContent = 'Gib einen Betrag ein.'; return; }
+  if (!wahl) { $('kosten-fehler').textContent = 'Wähle eine Kategorie.'; return; }
+  if (wahl === 'Sonstiges' && !text) { $('kosten-fehler').textContent = 'Bei Sonstiges bitte angeben, wofür.'; return; }
+  const jetzt = new Date();
+  const datum = tag === heute() ? isoZeit(jetzt) : `${tag}T12:00:00`;
+  if (kostenId) {
+    const id = kostenId;
+    aendere('kosten.json', (d) => { const b = d.buchungen.find((x) => x.id === id); if (b) Object.assign(b, { betrag, text, kategorie: wahl, datum: b.datum.slice(0, 10) === tag ? b.datum : datum }); return d; }, 'Ausgabe geändert').catch(() => {});
+  } else {
+    const b = { id: uid('b'), datum, kategorie: wahl, betrag, text, quelle: 'app' };
+    aendere('kosten.json', (d) => { if (!d.buchungen.some((x) => x.id === b.id)) d.buchungen.push(b); return d; }, `Ausgabe ${wahl}`).catch(() => {});
+    toast(`${euro(betrag)} · ${wahl}`);
+  }
+  schliesse();
   render();
-  toast(`${euro(betrag)} · ${wahl}`);
+};
+$('kosten-loeschen').onclick = () => {
+  const id = kostenId;
+  const setze = (v) => { aendere('kosten.json', (d) => { const b = d.buchungen.find((x) => x.id === id); if (b) b.storniert = v; return d; }, v ? 'Ausgabe gelöscht' : 'Ausgabe wiederhergestellt').catch(() => {}); render(); };
+  setze(true);
+  schliesse();
+  toast('Ausgabe gelöscht', { label: 'Rückgängig', fn: () => setze(false) });
 };
 
 /* ---------- Laden ---------- */
+let geladen = false;
 async function laden(erst = false) {
   try {
     await ladeAlle(DATEIEN);
     $('banner').innerHTML = '';
     if (erst) await routine();
+    geladen = true;
   } catch (e) {
     $('banner').innerHTML = e instanceof FehlerToken
       ? `<div class="banner">${icon('aus', 20)}<span>Noch nicht verbunden. <a href="einstellungen.html">Token eintragen</a></span></div>`
       : `<div class="banner">${icon('wolke', 20)}<span>Offline, zeige gespeicherten Stand.</span></div>`;
   }
-  if (!document.activeElement || !['INPUT'].includes(document.activeElement.tagName)) render();
+  const tippt = document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+  if (!tippt && !offenesBlatt) render(); else badges();
 }
 async function wetter() {
-  try { $('wetter').innerHTML = wetterHtml(await holeWetter(F['einstellungen.json']), 16); } catch { $('wetter').innerHTML = ''; }
+  try {
+    const w = await holeWetter(F['einstellungen.json']);
+    const e = w.empfehlung;
+    $('wetter').innerHTML = `${icon(wetterSymbol(w.code, !w.tag), 17, 2)}<b>${w.temperatur}°</b>${e ? `<span>· ${w.morgen ? 'Morgen: ' : ''}${esc(e.kleidung)}${e.schirm ? ', Schirm' : ''}</span>` : ''}`;
+  } catch { $('wetter').innerHTML = ''; }
 }
 function datum() { $('datum').textContent = headerText(new Date()); }
 
@@ -323,4 +530,4 @@ await laden(true);
 wetter();
 starteZyklus(() => laden(), 60);
 starteZyklus(wetter, 900);
-starteZyklus(() => routine().then(render), 1800);
+starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);

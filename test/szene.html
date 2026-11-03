@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../shared/scene.css"></head><body style="margin:0">
+<div id="s"></div>
+<script type="module">
+import { erstelleSzene } from '../shared/scene.js';
+const p = new URLSearchParams(location.search);
+const sz = erstelleSzene(document.getElementById('s'));
+sz.aktualisiere(new Date(p.get('t')), Number(p.get('c')||0));
+</script></body></html>

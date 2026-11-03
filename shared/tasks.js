@@ -1,9 +1,21 @@
-import { isoDate, parseDate, addDays, isoDow, montag, kwKey, kwLabel, fmtDM, fmtWtDM } from './util.js';
+import { isoDate, parseDate, addDays, isoDow, montag, kwKey, kwLabel, fmtDM, fmtWtDM, dunkler, esc } from './util.js';
 
-export const MODUL_FARBEN = { HM: '#0A84FF', TM: '#FF9F0A', WK: '#30B556', NPP: '#12A6C9', IT: '#AF52DE', CAX: '#FF375F' };
-export const LEBEN_FARBE = '#5E5CE6';
-export const modulFarbe = (m) => MODUL_FARBEN[m] || '#8E8E93';
-export const farbeVon = (a) => (a.liste === 'leben' ? LEBEN_FARBE : modulFarbe(a.modul));
+// Farben wie im TUM-Stundenplan
+export const MODULE_STANDARD = {
+  HM: { name: 'Höhere Mathematik 1', farbe: '#3FCDFF' },
+  TM: { name: 'Technische Mechanik 1', farbe: '#FF7C80' },
+  WK: { name: 'Werkstoffkunde 1', farbe: '#92D050' },
+  NPP: { name: 'Nachhaltige Produktionstechnik', farbe: '#FFCC66' },
+  IT: { name: 'Informatik (IT1)', farbe: '#CC99FF' },
+  CAX: { name: 'CAx 1', farbe: '#FFFF66' },
+};
+let MODULE = { ...MODULE_STANDARD };
+export function setzeModule(m) { MODULE = { ...MODULE_STANDARD, ...(m || {}) }; }
+export const module = () => MODULE;
+export const LEBEN_FARBE = '#8E8CF8';
+export const modulFarbe = (m) => MODULE[m]?.farbe || '#A0A4AE';
+export const farbeVon = (a) => (a.liste === 'leben' && !a.modul ? LEBEN_FARBE : modulFarbe(a.modul));
+export const farbStil = (c) => `--c:${c};--cd:${dunkler(c)}`;
 
 export function inPause(d, e) {
   const s = isoDate(d);
@@ -75,29 +87,41 @@ export function erzeugen(e, regeln, vorhanden, jetzt = new Date()) {
   return neu;
 }
 
-const sk = (a) => a.ab || a.datum || a.erstellt || '';
+const sk = (a) => a.faellig || a.ab || a.datum || (a.erstellt || '').slice(0, 10) || '';
 export function istHeute(a, jetzt = new Date()) {
   const h = isoDate(jetzt);
-  return a.ab === h || a.datum === h || (a.erstellt || '').startsWith(h);
+  if (a.faellig) return a.faellig === h;
+  return a.ab === h || a.datum === h || (!a.regel && (a.erstellt || '').startsWith(h));
+}
+export function ueberfaellig(a, jetzt = new Date()) {
+  return !!a.faellig && a.faellig < isoDate(jetzt);
 }
 export function offene(aufgaben, liste, jetzt = new Date()) {
   return aufgaben
     .filter((a) => a.liste === liste && a.status === 'offen')
-    .sort((x, y) => (istHeute(y, jetzt) - istHeute(x, jetzt)) || sk(x).localeCompare(sk(y)) || x.titel.localeCompare(y.titel));
+    .sort((x, y) => (ueberfaellig(y, jetzt) - ueberfaellig(x, jetzt)) || (istHeute(y, jetzt) - istHeute(x, jetzt)) || sk(x).localeCompare(sk(y)) || x.titel.localeCompare(y.titel));
 }
 export function erledigte(aufgaben, liste) {
   return aufgaben.filter((a) => a.liste === liste && a.status === 'erledigt')
     .sort((x, y) => (y.erledigt || '').localeCompare(x.erledigt || ''));
 }
-export function metaText(a) {
+export function metaText(a, jetzt = new Date()) {
+  if (a.faellig) {
+    const h = isoDate(jetzt);
+    if (a.faellig === h) return 'Heute';
+    if (a.faellig === isoDate(addDays(jetzt, 1))) return 'Morgen';
+    return (a.faellig < h ? 'Überfällig · ' : '') + fmtWtDM(a.faellig);
+  }
   if (a.kw) return kwLabel(a.kw);
   if (a.typ === 'Videos') return '';
-  if (a.liste === 'studium' && a.datum) return fmtWtDM(a.datum);
+  if (a.regel && a.datum) return fmtWtDM(a.datum);
   return '';
 }
-export function titelHtml(a, esc) {
-  if (a.liste === 'leben' || !a.modul || !a.titel.startsWith(a.modul)) return esc(a.titel);
-  return `<b>${esc(a.modul)}</b>${esc(a.titel.slice(a.modul.length))}`;
+export const badgeHtml = (m) => `<span class="badge" style="${farbStil(modulFarbe(m))}">${esc(m)}</span>`;
+export function titelHtml(a) {
+  if (!a.modul) return `<span class="txt">${esc(a.titel)}</span>`;
+  const rest = a.titel.startsWith(a.modul) ? a.titel.slice(a.modul.length).trim() : a.titel;
+  return `${badgeHtml(a.modul)}<span class="txt">${esc(rest)}</span>`;
 }
 
 // Termine eines Tages aus den Regeln (mit Uhrzeit) und dem Kalender.

@@ -7,150 +7,103 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Alltag">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Alltag</title>
 <link rel="stylesheet" href="shared/style.css">
-<style>
-  main { padding: calc(env(safe-area-inset-top) + 10px) 16px calc(110px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
-  .kopf { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
-  .kopf .info { font-size: 13px; color: var(--t2); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
-  .kopf .knoepfe { display: flex; gap: 10px; }
-  .kopf .rund.plus { background: var(--accent); color: #fff; border: 0; padding: 0; }
-  .kopf .rund { width: 34px; height: 34px; border-radius: 50%; background: var(--karte); display: grid; place-items: center; color: var(--t2); box-shadow: var(--schatten); }
-  h1 { font-size: 34px; font-weight: 700; letter-spacing: .3px; margin: 2px 0 10px; }
-  .wetterzeile { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--t2); margin: -4px 0 16px; }
-  .wetterzeile .w-ic { color: #ff9f0a; }
-  .wetterzeile .w-temp { font-weight: 600; color: var(--text); }
-  .wetterzeile .w-kl::before { content: "·"; margin-right: 7px; }
-
-  .held { background: var(--karte); border-radius: 18px; padding: 18px 18px 16px; margin-bottom: 22px; }
-  .held .klein { font-size: 13px; color: var(--t2); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
-  .held .gross { font-size: 40px; font-weight: 700; letter-spacing: -.5px; margin: 2px 0; font-variant-numeric: tabular-nums; }
-  .held .unter { font-size: 15px; color: var(--t2); }
-  .held .unter b { color: var(--text); font-weight: 600; }
-  .stapel { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--karte2); margin-top: 14px; gap: 2px; }
-  .stapel span { display: block; height: 100%; }
-  .kat .haupt .oben { display: flex; justify-content: space-between; gap: 8px; }
-  .kat .haupt .betrag { font-variant-numeric: tabular-nums; font-weight: 500; }
-  .kat .haupt .betrag small { color: var(--t2); font-weight: 400; }
-  .balken { height: 5px; border-radius: 3px; background: var(--karte2); margin-top: 7px; overflow: hidden; }
-  .balken span { display: block; height: 100%; border-radius: 3px; }
-  .balken .ok { background: var(--ok); } .balken .warn { background: var(--warn); } .balken .bad { background: var(--bad); } .balken .neutral { background: var(--t3); }
-  .kat { --einzug: 58px; }
-  .eintraege { background: var(--karte2); }
-  .eintrag { display: flex; gap: 10px; align-items: center; padding: 9px 16px 9px 58px; font-size: 15px; }
-  .eintrag .haupt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .eintrag .neben { color: var(--t2); }
-  .eintrag button { background: none; border: 0; color: var(--t3); padding: 2px; }
-
-  .chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 14px; padding: 0 16px; scrollbar-width: none; }
-  .chips::-webkit-scrollbar { display: none; }
-  .chip { flex: none; border: 0; background: var(--karte); border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 500; }
-  .chip.an { background: var(--c, var(--accent)); color: #fff; }
-  .diagramm { background: var(--karte); border-radius: 18px; padding: 16px 12px 10px; margin-bottom: 22px; }
-  .diagramm svg { display: block; width: 100%; height: auto; }
-  .diagramm text { font-size: 11px; fill: var(--t2); }
-  .kennzahlen { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
-  .kennzahl { background: var(--karte); border-radius: 14px; padding: 12px 14px; }
-  .kennzahl .k { font-size: 13px; color: var(--t2); }
-  .kennzahl .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-  .task { --einzug: 52px; }
-  .task .titel b { color: var(--c); font-weight: 600; }
-  .task.erl .titel { color: var(--t2); text-decoration: line-through; }
-  .task .neben.heute { color: var(--c); font-weight: 600; }
-  .artikel { --einzug: 52px; }
-  .artikel.erl .haupt { color: var(--t3); text-decoration: line-through; }
-  .eingabe .kreis { border-style: dashed; color: var(--t3); }
-
-  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); padding: 7px 0 calc(6px + env(safe-area-inset-bottom));
-    background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: .5px solid var(--linie); z-index: 20; }
-  .tabbar button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; color: var(--t3); }
-  .tabbar button.an { color: var(--accent); }
-
-  .fab { position: fixed; right: max(20px, calc(50% - 300px)); bottom: calc(86px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 50%; border: 0;
-    background: var(--accent); color: #fff; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0, 122, 255, .35); z-index: 15; }
-  .fab:active { transform: scale(.94); }
-
-  .schleier { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .25s; }
-  .schleier.an { opacity: 1; pointer-events: auto; }
-  .blatt { position: fixed; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; background: var(--bg); border-radius: 14px 14px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
-    z-index: 41; transform: translateY(105%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
-  .blatt.an { transform: none; }
-  .blatt .griff { width: 36px; height: 5px; border-radius: 3px; background: var(--t3); margin: 0 auto 10px; }
-  .blatt .kopfzeile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .blatt .kopfzeile b { font-size: 17px; }
-  .blatt .kopfzeile button { background: none; border: 0; color: var(--accent); font-size: 17px; padding: 4px; }
-  .blatt .kopfzeile button.fett { font-weight: 600; }
-  .katwahl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-  .katwahl button { border: 0; background: var(--karte); border-radius: 14px; padding: 12px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; }
-  .katwahl button.an { outline: 2.5px solid var(--c); outline-offset: -2.5px; }
-  .betragfeld { font-size: 34px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
-  .fehler { color: var(--bad); font-size: 14px; text-align: center; min-height: 20px; margin-top: 6px; }
-
-  .banner { background: var(--karte); border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; font-size: 15px; display: flex; gap: 10px; align-items: center; }
-  .banner .ic { color: var(--warn); }
-  .leer { text-align: center; color: var(--t2); padding: 28px 16px; font-size: 15px; }
-  .leer .ic { margin: 0 auto 8px; color: var(--ok); }
-</style>
+<link rel="stylesheet" href="phone.css">
 </head>
 <body>
+<div class="tint" id="tint"></div>
+<div class="kante-oben"></div>
+<div class="nav-knoepfe">
+  <button class="rund glas" id="neu" aria-label="Hinzufügen"></button>
+  <a class="rund glas" href="einstellungen.html" aria-label="Einstellungen" id="zahnrad"></a>
+</div>
+
 <main>
-  <div class="kopf"><span class="info" id="datum">…</span><span class="knoepfe"><button class="rund plus" id="fab" aria-label="Ausgabe hinzufügen" hidden></button><a class="rund" href="einstellungen.html" aria-label="Einstellungen" id="zahnrad"></a></span></div>
-  <h1 id="titel">To-dos</h1>
-  <div class="wetterzeile" id="wetter"></div>
+  <div class="kopf">
+    <div class="info" id="datum">…</div>
+    <h1 id="titel">To-dos</h1>
+    <div class="wetterzeile" id="wetter"></div>
+  </div>
   <div id="banner"></div>
 
+  <section id="tab-todos" hidden>
+    <div class="segment" data-seg="todoListe" style="--n:2"><button data-v="studium">Studium</button><button data-v="leben">Leben</button></div>
+    <div class="gruppe eingabe-gruppe">
+      <div class="zeile eingabe"><span class="kreis plus" id="plus-todo"></span><input class="feld" id="todo-input" placeholder="Neue Aufgabe" enterkeyhint="done" autocomplete="off"></div>
+      <div class="zubehoer" id="todo-zubehoer" hidden>
+        <div class="chips" id="todo-module"></div>
+        <div class="chips" id="todo-faellig"></div>
+      </div>
+    </div>
+    <div id="todo-liste"></div>
+    <button class="textknopf" id="erledigt-umschalten"></button>
+    <div id="erledigt-liste"></div>
+  </section>
+
+  <section id="tab-einkauf" hidden>
+    <div class="gruppe eingabe-gruppe">
+      <div class="zeile eingabe"><span class="kreis plus" id="plus-einkauf"></span><input class="feld" id="einkauf-input" placeholder="Artikel hinzufügen" enterkeyhint="done" autocomplete="off"></div>
+    </div>
+    <div class="vorschlaege" id="vorschlaege"></div>
+    <div id="einkauf-liste"></div>
+    <button class="textknopf" id="einkauf-aufraeumen" hidden>Erledigte entfernen</button>
+  </section>
+
   <section id="tab-finanzen" hidden>
-    <div class="segment" data-seg="finAnsicht"><button data-v="uebersicht">Übersicht</button><button data-v="verlauf">Verlauf</button></div>
+    <div class="segment" data-seg="finAnsicht" style="--n:2"><button data-v="uebersicht">Übersicht</button><button data-v="verlauf">Verlauf</button></div>
     <div id="fin-uebersicht">
-      <div class="segment" data-seg="zeitraum"><button data-v="monat">Monat</button><button data-v="3m">3 Monate</button><button data-v="12m">12 Monate</button></div>
+      <div class="segment klein" data-seg="zeitraum" style="--n:3"><button data-v="monat">Monat</button><button data-v="3m">3 Monate</button><button data-v="12m">12 Monate</button></div>
       <div class="held" id="fin-held"></div>
-      <div class="gruppe-titel"><span>Kategorien</span><span id="fin-hinweis"></span></div>
+      <div class="gruppe-titel"><span>Kategorien</span><span class="zahl" id="fin-hinweis"></span></div>
       <div class="gruppe" id="fin-kat"></div>
+      <div id="fin-letzte"></div>
     </div>
     <div id="fin-verlauf" hidden>
-      <div class="chips" id="verlauf-chips"></div>
+      <div class="chips" id="verlauf-chips" style="margin-bottom:14px"></div>
       <div class="diagramm" id="verlauf-svg"></div>
       <div class="kennzahlen" id="verlauf-zahlen"></div>
     </div>
   </section>
-
-  <section id="tab-einkauf" hidden>
-    <div class="gruppe">
-      <div class="zeile artikel eingabe"><span class="kreis" id="plus-einkauf"></span><input class="feld" id="einkauf-input" placeholder="Artikel hinzufügen" enterkeyhint="done" autocomplete="off"></div>
-      <div id="einkauf-liste"></div>
-    </div>
-    <button class="textknopf" id="einkauf-aufraeumen" hidden>Erledigte entfernen</button>
-  </section>
-
-  <section id="tab-todos" hidden>
-    <div class="segment" data-seg="todoListe"><button data-v="studium">Studium</button><button data-v="leben">Leben</button></div>
-    <div class="gruppe" id="leben-eingabe">
-      <div class="zeile task eingabe"><span class="kreis" id="plus-leben"></span><input class="feld" id="leben-input" placeholder="Neue Aufgabe" enterkeyhint="done" autocomplete="off"></div>
-    </div>
-    <div id="todo-liste"></div>
-    <button class="textknopf" id="erledigt-umschalten">Erledigte anzeigen</button>
-    <div id="erledigt-liste"></div>
-  </section>
 </main>
 
-
-<nav class="tabbar">
-  <button data-tab="finanzen" id="tb-finanzen"></button>
-  <button data-tab="einkauf" id="tb-einkauf"></button>
+<nav class="tabbar glas" id="tabbar">
+  <span class="tab-pille"></span>
   <button data-tab="todos" id="tb-todos"></button>
+  <button data-tab="einkauf" id="tb-einkauf"></button>
+  <button data-tab="finanzen" id="tb-finanzen"></button>
 </nav>
 
 <div class="schleier" id="schleier"></div>
-<div class="blatt" id="blatt">
+
+<!-- Ausgabe -->
+<div class="blatt glas" id="blatt-kosten">
   <div class="griff"></div>
-  <div class="kopfzeile"><button id="blatt-abbrechen">Abbrechen</button><b>Neue Ausgabe</b><button class="fett" id="blatt-sichern">Sichern</button></div>
+  <div class="kopfzeile"><button class="rund-k" data-zu aria-label="Abbrechen" id="kosten-zu"></button><b id="kosten-titel">Neue Ausgabe</b><button class="rund-k fertig" id="kosten-sichern" aria-label="Sichern"></button></div>
+  <input class="betragfeld" id="betrag" inputmode="decimal" placeholder="0,00 €" autocomplete="off">
   <div class="katwahl" id="katwahl"></div>
-  <div class="gruppe">
-    <div class="zeile"><input class="feld betragfeld" id="betrag" inputmode="decimal" placeholder="0,00 €" autocomplete="off"></div>
+  <div class="gruppe" style="margin-bottom:10px">
     <div class="zeile"><input class="feld" id="notiz" placeholder="Notiz (optional)" autocomplete="off"></div>
+    <div class="zeile"><span class="haupt">Datum</span><input type="date" id="kosten-datum" class="datumfeld"></div>
   </div>
-  <div class="fehler" id="blatt-fehler"></div>
+  <button class="loeschknopf" id="kosten-loeschen" hidden>Ausgabe löschen</button>
+  <div class="fehler" id="kosten-fehler"></div>
+</div>
+
+<!-- Aufgabe bearbeiten -->
+<div class="blatt glas" id="blatt-aufgabe">
+  <div class="griff"></div>
+  <div class="kopfzeile"><button class="rund-k" data-zu aria-label="Abbrechen" id="aufgabe-zu"></button><b>Aufgabe</b><button class="rund-k fertig" id="aufgabe-sichern" aria-label="Sichern"></button></div>
+  <div class="gruppe" style="margin-bottom:14px"><div class="zeile"><input class="feld" id="aufgabe-titel" placeholder="Titel" autocomplete="off"></div></div>
+  <div class="unterlabel">Liste</div>
+  <div class="segment" id="aufgabe-liste" data-lokal style="--n:2"><button data-v="studium">Studium</button><button data-v="leben">Leben</button></div>
+  <div id="aufgabe-modul-box"><div class="unterlabel">Modul</div><div class="chips" id="aufgabe-module" style="margin-bottom:16px"></div></div>
+  <div class="unterlabel">Fällig</div>
+  <div class="chips" id="aufgabe-faellig" style="margin-bottom:10px"></div>
+  <input type="date" id="aufgabe-datum" class="datumfeld voll" hidden>
+  <button class="loeschknopf" id="aufgabe-loeschen">Aufgabe löschen</button>
 </div>
 
 <script type="module" src="phone.js"></script>

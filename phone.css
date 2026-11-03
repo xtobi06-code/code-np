@@ -1,0 +1,117 @@
+main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 14px) 16px calc(120px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+.tint { position: fixed; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none; transition: background .6s;
+  background: radial-gradient(120% 100% at 15% 0%, var(--tint-farbe, rgba(0,122,255,.16)), transparent 70%); }
+.kante-oben { position: fixed; inset: 0 0 auto 0; height: calc(env(safe-area-inset-top) + 66px); z-index: 20; pointer-events: none;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); -webkit-mask-image: linear-gradient(#000 45%, transparent); mask-image: linear-gradient(#000 45%, transparent); }
+
+.nav-knoepfe { position: fixed; top: calc(env(safe-area-inset-top) + 12px); right: max(16px, calc(50% - 304px)); display: flex; gap: 10px; z-index: 25; }
+.rund { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text); border: 0; padding: 0; }
+.rund:active { transform: scale(.92); }
+.rund.akzent { background: var(--accent); color: #fff; border: 0; box-shadow: 0 6px 18px rgba(0, 122, 255, .35), inset 0 1px 0 rgba(255,255,255,.35); }
+
+.kopf { margin: 2px 2px 18px; padding-right: 110px; }
+.kopf .info { font-size: 13px; color: var(--t2); font-weight: 650; text-transform: uppercase; letter-spacing: .03em; }
+h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6px; line-height: 1.1; }
+.wetterzeile { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--t2); min-height: 18px; white-space: nowrap; overflow: hidden; }
+.wetterzeile .ic { color: #ff9f0a; width: 17px; height: 17px; }
+.wetterzeile b { color: var(--text); font-weight: 600; }
+
+/* Tab-Leiste */
+.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(calc(100% - 40px), 420px);
+  display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px; border-radius: 999px; z-index: 30; }
+.tab-pille { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: rgba(120, 120, 128, .16);
+  transform: translateX(calc(100% * var(--i, 0))); transition: transform .4s cubic-bezier(.3, .9, .3, 1.1); }
+.tabbar button { position: relative; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 5px; font-size: 10.5px; font-weight: 600; color: var(--text); opacity: .62; transition: color .25s, opacity .25s; }
+.tabbar button.an { color: var(--accent); opacity: 1; }
+.tabbar .ic { width: 24px; height: 24px; }
+.tabbar .punkt { position: absolute; top: 3px; left: calc(50% + 9px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; }
+
+/* Eingabe */
+.eingabe-gruppe { margin-bottom: 18px; }
+.kreis.plus { border-style: dashed; color: var(--t3); border-color: var(--t3); }
+.kreis.plus .ic { width: 13px; height: 13px; }
+.zubehoer { padding: 2px 0 12px; display: flex; flex-direction: column; gap: 8px; border-top: .5px solid var(--linie); padding-top: 10px; }
+.zubehoer .chips { margin: 0; padding: 0 14px; }
+.zubehoer .chip { background: var(--karte2); box-shadow: none; padding: 6px 12px; }
+.zubehoer .chip.an { background: var(--c, var(--accent)); color: #fff; }
+.unterlabel { font-size: 13px; color: var(--t2); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; margin: 0 4px 7px; }
+
+/* Aufgaben */
+.task { --einzug: 54px; }
+.task .titel { display: flex; align-items: center; min-width: 0; }
+.task .titel .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task.erl .titel .txt { color: var(--t2); text-decoration: line-through; }
+.task .neben.heute { color: var(--cd); font-weight: 650; }
+.task .neben.ueber { color: var(--bad); font-weight: 600; }
+@media (prefers-color-scheme: dark) { .task .neben.heute { color: var(--c); } }
+.leer { text-align: center; color: var(--t2); padding: 30px 16px 26px; font-size: 15px; }
+.leer .ic { margin: 0 auto 10px; color: var(--ok); width: 40px; height: 40px; }
+.leer b { display: block; color: var(--text); font-size: 17px; margin-bottom: 2px; }
+
+/* Einkauf */
+.artikel { --einzug: 54px; }
+.artikel.erl .haupt { color: var(--t3); text-decoration: line-through; }
+.vorschlaege { margin: -6px 0 20px; }
+.vorschlaege .unterlabel { margin-bottom: 8px; }
+
+/* Finanzen */
+.segment.klein button { font-size: 13px; padding: 6px 4px; }
+.held { position: relative; overflow: hidden; background: var(--karte); border-radius: 28px; padding: 20px 20px 18px; margin-bottom: 26px; box-shadow: var(--schatten); }
+.held .reihe { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.held .klein { font-size: 13px; color: var(--t2); font-weight: 650; text-transform: uppercase; letter-spacing: .03em; }
+.held .gross { font-family: ui-rounded, -apple-system, system-ui, sans-serif; font-size: 44px; font-weight: 700; letter-spacing: -.03em; margin: 2px 0 2px; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.held .unter { font-size: 15px; color: var(--t2); }
+.held .unter b { color: var(--text); font-weight: 650; }
+.held .ring text { font-family: ui-rounded, -apple-system, system-ui; font-size: 15px; font-weight: 700; fill: var(--text); }
+.stapelbalken { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--karte2); margin-top: 16px; gap: 2px; }
+.stapelbalken span { display: block; height: 100%; }
+.kat { --einzug: 60px; cursor: pointer; }
+.kat .oben { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.kat .betrag { font-variant-numeric: tabular-nums; font-weight: 600; }
+.kat .betrag small { color: var(--t2); font-weight: 400; font-size: 14px; }
+.balken { height: 6px; border-radius: 999px; background: var(--karte2); margin-top: 7px; overflow: hidden; }
+.balken span { display: block; height: 100%; border-radius: 999px; }
+.balken .ok { background: var(--ok); } .balken .warn { background: var(--warn); } .balken .bad { background: var(--bad); } .balken .neutral { background: var(--t3); }
+.eintraege { position: relative; background: var(--karte2); }
+.eintrag { display: flex; gap: 10px; align-items: center; padding: 10px 18px 10px 60px; font-size: 15px; }
+.eintrag .haupt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eintrag .neben { color: var(--t2); font-variant-numeric: tabular-nums; }
+.buchung { --einzug: 60px; cursor: pointer; }
+.buchung .unter { font-size: 13px; color: var(--t2); }
+.buchung .betrag { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.diagramm { background: var(--karte); border-radius: 26px; padding: 18px 12px 10px; margin-bottom: 22px; box-shadow: var(--schatten); }
+.diagramm svg { display: block; width: 100%; height: auto; }
+.diagramm text { font-size: 11px; fill: var(--t2); }
+.kennzahlen { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.kennzahl { background: var(--karte); border-radius: 22px; padding: 14px 16px; box-shadow: var(--schatten); }
+.kennzahl .k { font-size: 13px; color: var(--t2); font-weight: 500; }
+.kennzahl .v { font-family: ui-rounded, -apple-system, system-ui; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+/* Sheets */
+.schleier { position: fixed; inset: 0; background: rgba(0, 0, 0, .28); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.schleier.an { opacity: 1; pointer-events: auto; }
+.blatt { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 620px; margin: 0 auto; border-radius: 36px; padding: 8px 18px 20px; z-index: 41;
+  transform: translateY(calc(100% + 30px)); transition: transform .42s cubic-bezier(.25, .9, .3, 1); max-height: calc(100% - env(safe-area-inset-top) - 30px); overflow-y: auto;
+  --glas: rgba(242, 242, 247, .9); }
+@media (prefers-color-scheme: dark) { .blatt { --glas: rgba(28, 28, 30, .9); } }
+.blatt.an { transform: none; }
+.blatt .griff { width: 38px; height: 5px; border-radius: 3px; background: var(--t3); margin: 0 auto 8px; opacity: .7; }
+.blatt .kopfzeile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.blatt .kopfzeile b { font-size: 17px; font-weight: 650; }
+.rund-k { width: 38px; height: 38px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--seg); color: var(--text); padding: 0; }
+.rund-k.fertig { background: var(--accent); color: #fff; }
+.rund-k .ic { width: 18px; height: 18px; }
+.betragfeld { display: block; width: 100%; border: 0; background: none; outline: none; text-align: center; font-family: ui-rounded, -apple-system, system-ui; font-size: 46px; font-weight: 700; letter-spacing: -.03em; padding: 4px 0 14px; font-variant-numeric: tabular-nums; }
+.betragfeld::placeholder { color: var(--t3); }
+.katwahl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.katwahl button { border: 0; background: var(--karte); border-radius: 18px; padding: 11px 4px 9px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; transition: transform .15s; }
+.katwahl button:active { transform: scale(.95); }
+.katwahl button.an { box-shadow: inset 0 0 0 2.5px var(--c); }
+.datumfeld { border: 0; background: var(--karte2); border-radius: 10px; padding: 6px 10px; font-size: 15px; color: var(--accent); outline: none; }
+.datumfeld.voll { display: block; width: 100%; margin-bottom: 12px; padding: 10px 12px; }
+.loeschknopf { display: block; width: 100%; border: 0; border-radius: 16px; padding: 13px; background: var(--karte); color: var(--bad); font-weight: 600; margin-top: 8px; }
+.fehler { color: var(--bad); font-size: 14px; text-align: center; min-height: 18px; margin-top: 6px; }
+
+.banner { background: var(--karte); border-radius: 22px; padding: 14px 16px; margin-bottom: 18px; font-size: 15px; display: flex; gap: 10px; align-items: center; box-shadow: var(--schatten); }
+.banner .ic { color: var(--warn); }
