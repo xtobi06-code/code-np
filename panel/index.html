@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Panel">
+<title>Panel</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  body { display: flex; flex-direction: column; height: 100vh; padding: 14px 16px; gap: 12px; overflow: hidden; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #datum { font-size: 22px; font-weight: 600; white-space: nowrap; }
+  #uhr { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #wetter { font-size: 18px; padding: 6px 16px; }
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 12px; }
+  .spalte { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .leer { color: var(--muted); font-size: 15px; }
+  footer { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <span id="datum">…</span>
+  <span id="wetter" class="chip">Wetter lädt …</span>
+  <span id="uhr">--:--</span>
+</header>
+<main>
+  <section class="card"><h2>Studium</h2><p class="leer">Aufgaben folgen in Phase 2.</p></section>
+  <section class="card"><h2>Leben</h2><p class="leer">Aufgaben folgen in Phase 2.</p></section>
+  <div class="spalte">
+    <section class="card"><h2>Heute</h2><p class="leer">Termine folgen.</p></section>
+    <section class="card" style="flex:1"><h2>Licht</h2><p class="leer">Buttons folgen.</p></section>
+  </div>
+</main>
+<footer>
+  <span id="sync">…</span>
+  <a href="../einstellungen.html">Einstellungen</a>
+</footer>
+<script type="module">
+  import { startClock, startHeader } from '../shared/util.js';
+  import { aktualisiereWetter, pruefeSync, starteZyklus, haltWachen } from '../shared/app.js';
+  startHeader(document.getElementById('datum'));
+  startClock(document.getElementById('uhr'));
+  const wetter = () => aktualisiereWetter(document.getElementById('wetter'));
+  const sync = () => pruefeSync(document.getElementById('sync'));
+  wetter(); sync();
+  starteZyklus(wetter, 900);
+  starteZyklus(sync, 45);
+  haltWachen();
+</script>
+</body>
+</html>

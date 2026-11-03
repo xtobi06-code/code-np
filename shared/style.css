@@ -1,0 +1,24 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f2f2f7; --card: #ffffff; --text: #1c1c1e; --muted: #6e6e73;
+  --accent: #0a7aff; --accent-bg: #e5f0ff; --line: #e5e5ea; --ok: #34c759; --warn: #ff9f0a; --bad: #ff3b30;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #000; --card: #1c1c1e; --text: #fff; --muted: #98989d; --accent: #3d94ff; --accent-bg: #12263f; --line: #38383a; }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.card { background: var(--card); border-radius: var(--radius); padding: 12px 14px; min-height: 0; overflow: hidden; }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+.muted { color: var(--muted); }
+.chip { background: var(--accent-bg); color: var(--accent); border-radius: 999px; padding: 4px 12px; font-size: 14px; white-space: nowrap; }
+.punkt { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+.punkt.ok { background: var(--ok); } .punkt.warn { background: var(--warn); } .punkt.bad { background: var(--bad); }
+a { color: var(--accent); text-decoration: none; }
+button, input { font: inherit; }
