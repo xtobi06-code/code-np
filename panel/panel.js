@@ -599,6 +599,7 @@ function schliesseZeile() {
   if (!offeneZeile) return;
   offeneZeile.classList.remove('auf');
   offeneZeile.querySelector('.vorn').style.transform = '';
+  offeneZeile.querySelector('.loesch').style.width = '';
   offeneZeile = null;
 }
 {
@@ -623,6 +624,7 @@ function schliesseZeile() {
     }
     d.t = Math.max(-BREITE - 20, Math.min(0, d.start + dx));
     d.vorn.style.transform = `translateX(${d.t}px)`;
+    d.zeile.querySelector('.loesch').style.width = `${-d.t}px`;
   });
   const ende = () => {
     if (!d) return;
@@ -631,7 +633,8 @@ function schliesseZeile() {
     if (!x.aktiv) return;
     wischZeit = Date.now();
     x.zeile.classList.remove('zieht');
-    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; x.zeile.classList.add('auf'); offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; x.zeile.classList.remove('auf'); if (offeneZeile === x.zeile) offeneZeile = null; }
+    const lo = x.zeile.querySelector('.loesch');
+    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; lo.style.width = `${BREITE}px`; x.zeile.classList.add('auf'); offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; lo.style.width = ''; x.zeile.classList.remove('auf'); if (offeneZeile === x.zeile) offeneZeile = null; }
   };
   document.addEventListener('pointerup', ende);
   document.addEventListener('pointercancel', ende);

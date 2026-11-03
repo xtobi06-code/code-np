@@ -117,8 +117,8 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 /* Wischen zum Löschen */
 .zeile.task { padding: 0; overflow: hidden; }
 .task .vorn { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 9px 18px; width: 100%; box-sizing: border-box; background: var(--karte); position: relative; z-index: 1; transition: transform .28s cubic-bezier(.25,.9,.3,1); touch-action: pan-y; }
-.task.zieht .vorn { transition: none; }
-.task .loesch { position: absolute; top: 0; right: 0; bottom: 0; width: 96px; border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }
+.task.zieht .vorn, .task.zieht .loesch { transition: none; }
+.task .loesch { position: absolute; top: 0; right: 0; bottom: 0; width: 0; overflow: hidden; white-space: nowrap; transition: width .28s cubic-bezier(.25,.9,.3,1); border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }
 
 
 /* ---------- Liquid-Glass-Look (nur Handy-App) ---------- */
@@ -133,8 +133,6 @@ body.glasapp { --bg: #02040b; --karte: rgba(16, 22, 40, .42); --karte2: rgba(255
 .glasapp .segment::before { box-shadow: inset 0 1px 0 rgba(255,255,255,.3); }
 .glasapp .kopf, .glasapp .gruppe-titel, .glasapp .unterlabel { text-shadow: 0 1px 14px rgba(0, 0, 0, .35); }
 .glasapp .task .vorn { background: transparent; }
-.glasapp .task .loesch { opacity: 0; transition: opacity .2s; }
-.glasapp .task.zieht .loesch, .glasapp .task.auf .loesch { opacity: 1; }
 .glasapp .tab-pille { background: rgba(255, 255, 255, .16); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
 
 .senden { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; display: grid; place-items: center; margin-left: 8px; }

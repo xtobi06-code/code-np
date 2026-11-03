@@ -33,6 +33,11 @@ function kopie() {
 
 const schalter = (pfad, an) => `<label class="schalter"><input type="checkbox" data-p="${pfad}" ${an ? 'checked' : ''}><span></span></label>`;
 const knoepfe = () => '';
+const wisch = (weg, html) => {
+  const m = html.match(/ data-reihe="(\w+)"/);
+  const inner = m ? html.replace(m[0], '') : html;
+  return `<div class="wisch"${m ? ` data-reihe="${m[1]}"` : ''}><div class="vorn">${inner}</div><button class="loesch" data-weg="${weg}">Löschen</button></div>`;
+};
 const GRIFF = '<svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 9h14M5 15h14"/></svg>';
 const griff = (k, i) => `<span class="griff" data-sort="${k}.${i}" aria-label="Verschieben">${GRIFF}</span>`;
 
@@ -60,12 +65,12 @@ function finanzenHtml() {
     <span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span><span class="lbl">${esc(k.name)}</span>
     <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €${griff('kats', i)}</div>`).join('')}</div>
   <div class="gruppe-titel">Dauerkosten (am Monatsersten gebucht)</div>
-  <div class="gruppe">${S.dauer.map((d, i) => `<div class="zeile" data-reihe="dauer" style="flex-wrap:wrap;row-gap:4px">
+  <div class="gruppe">${S.dauer.map((d, i) => wisch(`dauer.${i}`, `<div class="zeile" data-reihe="dauer" style="flex-wrap:wrap;row-gap:4px">
     ${schalter(`dauer.${i}.aktiv`, d.aktiv !== false)}
     <input class="links" style="flex:1 1 120px" data-p="dauer.${i}.name" value="${esc(d.name)}" placeholder="Name, z. B. Mobilfunk">
-    <button class="x" data-weg="dauer.${i}" aria-label="Entfernen">${icon('x', 18)}</button>${griff('dauer', i)}
+    ${griff('dauer', i)}
     <div style="flex-basis:100%;display:flex;align-items:center;gap:10px;padding-left:63px;font-size:15px">
-      <span style="flex:1"></span><input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> € pro Monat</div></div>`).join('')}
+      <span style="flex:1"></span><input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> € pro Monat</div></div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="dauer">${'Dauerkosten hinzufügen'}</button></div></div>
   ${knoepfe('finanzen')}`;
 }
@@ -75,7 +80,7 @@ function lichtHtml() {
   return `<div class="gruppe-titel"><span>Licht-Modi</span><span style="font-weight:400;color:var(--t2)">${S.licht.filter((l) => l.favorit).length} Favoriten</span></div>
   <div class="gruppe">${S.licht.map((l, i) => {
     const auf = lichtOffen.has(i);
-    return `<div class="regel" data-reihe="licht">
+    return wisch(`licht.${i}`, `<div class="regel" data-reihe="licht">
     <div class="kopf" data-licht-auf="${i}"><span class="symbol" style="background:${esc(l.farbe || '#FFD60A')};color:#111">${icon(l.symbol || 'lampe', 17, 2.2)}</span>
       <span class="name">${esc(l.name || 'Ohne Namen')}<small>${esc(l.kurzbefehl || 'Kurzbefehl fehlt')}</small></span>
       <button class="x" style="color:${l.favorit ? '#ffcc00' : 'var(--t3)'}" data-fav="${i}" aria-label="Favorit">${icon('stern', 21, l.favorit ? 2.6 : 2)}</button>
@@ -85,8 +90,7 @@ function lichtHtml() {
       <div class="reihe"><span>Kurzbefehl</span><input style="flex:1" data-p="licht.${i}.kurzbefehl" value="${esc(l.kurzbefehl || '')}" placeholder="Exakter Name" autocapitalize="none" autocorrect="off"></div>
       <div class="reihe"><span>Farbe</span><input type="color" class="farbe" data-p="licht.${i}.farbe" value="${esc(l.farbe || '#FFD60A')}"></div>
       <div class="reihe"><span>Symbol</span><div class="symbole">${LICHT_SYMBOLE.map((s) => `<button class="${s === l.symbol ? 'an' : ''}" data-symbol="${i}:${s}">${icon(s, 18)}</button>`).join('')}</div></div>
-      <div class="reihe"><button class="textknopf" style="padding:0;color:var(--bad)" data-weg="licht.${i}">Entfernen</button></div>
-    </div>` : ''}</div>`;
+    </div>` : ''}</div>`);
   }).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="licht">Modus hinzufügen</button></div></div>
   <p class="fuss">Stern = Favorit: Die ersten vier Favoriten stehen auf der Übersicht des Panels, alle Modi auf der Licht-Seite (nach links wischen oder „Alle“). Der Kurzbefehl muss genau so heißen wie in der Kurzbefehle-App, z. B. eine Govee-Tap-to-Run-Aktion, die du „Zu Siri hinzugefügt“ hast.</p>
@@ -100,12 +104,11 @@ function semesterHtml() {
     <div class="zeile"><span class="lbl">Ende</span><input type="date" class="datum" data-p="e.semester.bis" value="${esc(S.e.semester?.bis || '')}"></div>
   </div>
   <div class="gruppe-titel">Pausen und freie Tage</div>
-  <div class="gruppe">${S.pausen.map((p, i) => `<div class="zeile" style="flex-wrap:wrap;row-gap:8px">
+  <div class="gruppe">${S.pausen.map((p, i) => wisch(`pausen.${i}`, `<div class="zeile" style="flex-wrap:wrap;row-gap:8px">
     <input class="links" style="flex:1 1 140px" data-p="pausen.${i}.name" value="${esc(p.name)}" placeholder="Name">
-    <button class="x" data-weg="pausen.${i}" aria-label="Entfernen">${icon('x', 18)}</button>
     <div style="flex-basis:100%;display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--t2)">
       <input type="date" class="datum" style="width:128px" data-p="pausen.${i}.von" value="${esc(p.von)}"> bis
-      <input type="date" class="datum" style="width:128px" data-p="pausen.${i}.bis" value="${esc(p.bis)}"></div></div>`).join('')}
+      <input type="date" class="datum" style="width:128px" data-p="pausen.${i}.bis" value="${esc(p.bis)}"></div></div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="pausen">Pause hinzufügen</button></div></div>
   <p class="fuss">In Pausen und außerhalb der Vorlesungszeit entstehen keine Aufgaben. Für einen einzelnen Feiertag Beginn und Ende gleich setzen.</p>
   ${knoepfe('semester')}`;
@@ -135,13 +138,12 @@ function regelHtml(r, i) {
       ${zeiten}
       <div class="reihe"><span>Rhythmus</span><select data-p="regeln.${i}.rhythmus"><option value="woche" ${r.rhythmus !== '2wochen' ? 'selected' : ''}>Jede Woche</option><option value="2wochen" ${r.rhythmus === '2wochen' ? 'selected' : ''}>Alle 2 Wochen</option></select></div>
       <div class="reihe"><span>Gültig</span><input type="date" data-p="regeln.${i}.von" value="${esc(r.von || '')}"> bis <input type="date" data-p="regeln.${i}.bis" value="${esc(r.bis || '')}"></div>
-      <div class="reihe"><button class="textknopf" style="padding:0;color:var(--bad)" data-weg="regeln.${i}">Regel löschen</button></div>
     </div>` : ''}</div>`;
 }
 
 function regelnHtml() {
   return `<div class="gruppe-titel">Wiederkehrende Aufgaben (Studium)</div>
-  <div class="gruppe">${S.regeln.map(regelHtml).join('')}
+  <div class="gruppe">${S.regeln.map((r, i) => wisch(`regeln.${i}`, regelHtml(r, i))).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="regeln">Regel hinzufügen</button></div></div>
   <p class="fuss">Tippe auf eine Regel zum Bearbeiten. Änderungen wirken auf neu entstehende Aufgaben, bestehende bleiben unverändert.</p>
   ${knoepfe('regeln')}`;
@@ -149,10 +151,10 @@ function regelnHtml() {
 
 function kleidungHtml() {
   return `<div class="gruppe-titel">Kleidungsempfehlung (gefühlte Temperatur 7 bis 20 Uhr, kälteste Stunde)</div>
-  <div class="gruppe">${S.stufen.map((s, i) => `<div class="zeile"><span class="lbl" style="flex:none;color:var(--t2)">unter</span>
+  <div class="gruppe">${S.stufen.map((s, i) => wisch(`stufen.${i}`, `<div class="zeile"><span class="lbl" style="flex:none;color:var(--t2)">unter</span>
     <input class="zahl" style="width:44px" inputmode="numeric" data-p="stufen.${i}.bis" value="${esc(s.bis)}">°
     <input class="links" style="flex:1" data-p="stufen.${i}.text" value="${esc(s.text)}">
-    <button class="x" data-weg="stufen.${i}" aria-label="Entfernen">${icon('x', 18)}</button></div>`).join('')}
+</div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="stufen">Stufe hinzufügen</button></div>
     <div class="zeile"><span class="lbl">Schirm ab Regenwahrscheinlichkeit</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="e.kleidung.regenSchwelle" value="${esc(S.e.kleidung?.regenSchwelle ?? 40)}"> %</div>
   </div>
@@ -161,11 +163,11 @@ function kleidungHtml() {
 
 function moduleHtml() {
   return `<div class="gruppe-titel">Module</div>
-  <div class="gruppe">${S.module.map((m, i) => `<div class="zeile" data-reihe="module">
+  <div class="gruppe">${S.module.map((m, i) => wisch(`module.${i}`, `<div class="zeile" data-reihe="module">
     <input type="color" class="farbe" data-p="module.${i}.farbe" value="${esc(m.farbe)}">
     <input class="links" style="width:64px;font-weight:600" data-p="module.${i}.k" value="${esc(m.k)}" autocapitalize="characters">
     <input class="links" style="flex:1" data-p="module.${i}.name" value="${esc(m.name)}" placeholder="Voller Name">
-    <button class="x" data-weg="module.${i}" aria-label="Entfernen">${icon('x', 18)}</button>${griff('module', i)}</div>`).join('')}
+    ${griff('module', i)}</div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="module">Modul hinzufügen</button></div></div>
   <p class="fuss">Die Farben stammen aus deinem TUM-Stundenplan. Das Kürzel muss zu den Regeln passen.</p>
   ${knoepfe('module')}`;
@@ -217,6 +219,7 @@ function anleitungHtml() {
 }
 
 function zeichne() {
+  offeneWisch = null;
   $('inhalt').innerHTML = verbindungHtml() + (S ? finanzenHtml() + lichtHtml() + panelHtml() + regelnHtml() + moduleHtml() + semesterHtml() + kleidungHtml() + anleitungHtml() : '');
   if (S && S.panel.hintergrund === 'fotos') fotosZeigen();
 }
@@ -437,6 +440,60 @@ $('zurueck').addEventListener('click', (e) => {
     if (await alleSichern()) location.href = ziel; else { bl.remove(); }
   });
 });
+
+/* Wischen zum Löschen (wie bei den To-dos) */
+const BR = 96;
+let offeneWisch = null;
+let wischZeit = 0;
+function wischSetze(w, t, anim) {
+  w.querySelector('.vorn').style.transform = t ? `translateX(${t}px)` : '';
+  w.querySelector('.loesch').style.width = `${-t}px`;
+}
+function wischZu() {
+  if (!offeneWisch) return;
+  wischSetze(offeneWisch, 0);
+  offeneWisch = null;
+}
+{
+  let d = null;
+  document.addEventListener('pointerdown', (e) => {
+    const vorn = e.target.closest('.wisch > .vorn');
+    if (!vorn || e.target.closest('.griff')) { if (!e.target.closest('.loesch')) wischZu(); return; }
+    const w = vorn.parentElement;
+    if (offeneWisch && offeneWisch !== w) wischZu();
+    d = { x: e.clientX, y: e.clientY, w, start: offeneWisch === w ? -BR : 0, aktiv: false };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.aktiv) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; }
+      if (Math.abs(dx) < 8) return;
+      d.aktiv = true;
+      d.w.classList.add('zieht');
+    }
+    d.t = Math.max(-BR - 24, Math.min(0, d.start + dx));
+    wischSetze(d.w, d.t);
+  });
+  const ende = () => {
+    if (!d) return;
+    const x = d;
+    d = null;
+    if (!x.aktiv) return;
+    wischZeit = Date.now();
+    x.w.classList.remove('zieht');
+    if (x.t < -BR / 2) { wischSetze(x.w, -BR); offeneWisch = x.w; } else { wischSetze(x.w, 0); if (offeneWisch === x.w) offeneWisch = null; }
+  };
+  document.addEventListener('pointerup', ende);
+  document.addEventListener('pointercancel', ende);
+  // Klicks direkt nach dem Wischen oder auf eine geöffnete Zeile nicht als Antippen werten
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.loesch')) return;
+    if (Date.now() - wischZeit < 350) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if (offeneWisch && e.target.closest('.wisch')) { e.stopImmediatePropagation(); e.preventDefault(); wischZu(); }
+  }, true);
+}
 
 /* Reihenfolge per Ziehen am Griff */
 document.addEventListener('pointerdown', (e) => {
