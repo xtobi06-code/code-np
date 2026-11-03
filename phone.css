@@ -15,7 +15,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .wetterzeile b { color: var(--text); font-weight: 600; }
 
 /* Tab-Leiste */
-.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) * .45); width: min(calc(100% - 40px), 420px);
+.tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) * .45 + 12px); width: min(calc(100% - 40px), 420px);
   display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px; border-radius: 999px; z-index: 30; }
 .tab-pille { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: rgba(120, 120, 128, .16);
   transform: translateX(calc(100% * var(--i, 0))); transition: transform .4s cubic-bezier(.3, .9, .3, 1.1); }

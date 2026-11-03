@@ -199,6 +199,7 @@ zub.addEventListener('pointerdown', (e) => { if (!e.target.closest('input')) e.p
 zub.addEventListener('click', (e) => {
   const m = e.target.closest('[data-modul]');
   const f = e.target.closest('[data-faellig]');
+  if (!m && !f) return; // Klick auf das Datumsfeld darf es nicht neu zeichnen, sonst schließt der Kalender
   if (m) S.neuModul = m.dataset.modul;
   if (f) S.neuFaellig = f.dataset.faellig;
   zubehoer();
