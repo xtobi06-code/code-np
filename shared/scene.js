@@ -97,7 +97,12 @@ export const STILE = {
     { basis: 830, amp: 130, mix: 0.74 }, { basis: 930, amp: 100, mix: 0.93 }] },
   duenen: { name: 'Hügel', nebel: false, seed: 5, ebenen: [
     { basis: 660, amp: 90, mix: 0.2 }, { basis: 740, amp: 80, mix: 0.45 }, { basis: 830, amp: 70, mix: 0.7 }, { basis: 920, amp: 60, mix: 0.92 }] },
-  aurora: { name: 'Aurora', aurora: true, ebenen: [] },
+  aurora: { name: 'Himmel', aurora: true, ebenen: [] },
+  abendrot: { name: 'Abendrot', aurora: true, ebenen: [], farben: ['#2a1450', '#a23b8c', '#ff6a4d', '#ffb15c'] },
+  ozean: { name: 'Ozean', aurora: true, ebenen: [], farben: ['#04122e', '#0a4fa8', '#13a4d8', '#6fe3e8'] },
+  minze: { name: 'Minze', aurora: true, ebenen: [], farben: ['#04201f', '#0b6b63', '#27c2a0', '#a6f5c8'] },
+  violett: { name: 'Violett', aurora: true, ebenen: [], farben: ['#0c0524', '#3a1a8c', '#8a4dff', '#e08cff'] },
+  graphit: { name: 'Graphit', aurora: true, ebenen: [], farben: ['#06080c', '#1c222d', '#3b4556', '#7f8b9f'] },
 };
 const NEBEL = [{ nach: 0, top: 53, hoehe: 14, dauer: 300, deck: 0.5 }, { nach: 2, top: 64, hoehe: 15, dauer: 220, deck: 0.42 }, { nach: 3, top: 76, hoehe: 16, dauer: 160, deck: 0.32 }];
 
@@ -151,6 +156,20 @@ export function erstelleSzene(root) {
   function aktualisiere(jetzt = new Date(), code = 0) {
     const { el, az } = sonnenstand(jetzt);
     const p = palette(el, code);
+    if (stil.farben) {
+      const [a, b, c, d] = stil.farben;
+      himmel.style.background = `linear-gradient(165deg, ${a} 0%, ${b} 45%, ${c} 100%)`;
+      root.style.setProperty('--nebel', b);
+      root.style.setProperty('--glanz', d);
+      sternSvg.style.opacity = '0';
+      sonne.style.transition = 'none';
+      sonne.style.opacity = '0';
+      root.classList.toggle('regnet', p.regen);
+      root.classList.toggle('schneit', p.schnee);
+      letzte = [jetzt, code];
+      return { el, p };
+    }
+    sonne.style.transition = '';
     himmel.style.background = `linear-gradient(180deg, ${p.oben} 0%, ${p.mitte} 42%, ${p.horizont} 70%, ${p.horizont} 100%)`;
     root.style.setProperty('--nebel', p.nebel);
     root.style.setProperty('--glanz', p.glanz);

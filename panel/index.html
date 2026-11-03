@@ -25,6 +25,7 @@
     <section class="seite uebersicht">
       <div class="spalte links">
         <div class="sperr">
+          <a class="einst glas" href="../einstellungen.html" id="einst" aria-label="Einstellungen"></a>
           <div class="sperr-datum" id="datum">…</div>
           <div class="sperr-uhr" id="uhr">--:--</div>
           <div class="sperr-wetter" id="wetter-kurz"></div>
@@ -34,14 +35,18 @@
           <div class="stapel-karten" id="stapel-karten"></div>
           <div class="stapel-punkte" id="stapel-punkte"></div>
         </div>
+        <button class="glas widget einkauf-widget" id="einkauf-widget" aria-label="Einkaufsliste öffnen">
+          <header class="w-kopf"><span class="w-titel"><span class="w-ic" id="ic-einkauf"></span>Einkauf</span><span class="w-zahl" id="n-einkauf"></span></header>
+          <div class="vorschau" id="einkauf-vorschau"></div>
+        </button>
       </div>
       <div class="glas widget liste-widget">
-        <header class="w-kopf"><span class="w-titel"><span class="w-ic" id="ic-studium"></span>Studium</span><span class="w-zahl" id="n-studium"></span></header>
+        <header class="w-kopf"><span class="w-titel"><span class="w-ic" id="ic-studium"></span>Studium</span><span class="w-kopf-rechts"><span class="w-zahl" id="n-studium"></span><button class="plus-k" data-neu="studium" aria-label="Aufgabe hinzufügen"></button></span></header>
         <div class="liste" id="studium"></div>
       </div>
       <div class="spalte rechts">
         <div class="glas widget liste-widget leben">
-          <header class="w-kopf"><span class="w-titel"><span class="w-ic" id="ic-leben"></span>Leben</span><span class="w-zahl" id="n-leben"></span></header>
+          <header class="w-kopf"><span class="w-titel"><span class="w-ic" id="ic-leben"></span>Leben</span><span class="w-kopf-rechts"><span class="w-zahl" id="n-leben"></span><button class="plus-k" data-neu="leben" aria-label="Aufgabe hinzufügen"></button></span></header>
           <div class="liste" id="leben"></div>
         </div>
         <div class="glas widget licht-widget">
@@ -66,10 +71,12 @@
   </div>
 </div>
 
+<div class="dialog-schleier" id="dialog-schleier"></div>
+<div class="dialog glas" id="dialog" role="dialog"></div>
+
 <nav class="punkte glas" id="punkte">
   <button data-seite="0" aria-label="Übersicht"></button><button data-seite="1" aria-label="Licht"></button><button data-seite="2" aria-label="Uhr"></button>
 </nav>
-<a class="ecke rechts glas" href="../einstellungen.html" id="einst" aria-label="Einstellungen"></a>
 <div class="ecke links status" id="status" hidden></div>
 <div class="hinweis" id="hinweis"><div class="glas widget"><b>Noch nicht verbunden</b><p>Trage das Token in den Einstellungen ein.</p><a class="pille" href="../einstellungen.html">Einstellungen öffnen</a></div></div>
 <script type="module" src="panel.js"></script>

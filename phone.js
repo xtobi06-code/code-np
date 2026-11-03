@@ -52,12 +52,11 @@ function zeigeTab() {
   $('tabbar').style.setProperty('--i', TABS.indexOf(S.tab));
   $('titel').textContent = TITEL[S.tab];
   document.documentElement.style.setProperty('--tint-farbe', TINT[S.tab]);
-  $('neu').classList.toggle('akzent', S.tab === 'finanzen');
   $('neu').setAttribute('aria-label', S.tab === 'finanzen' ? 'Ausgabe hinzufügen' : S.tab === 'einkauf' ? 'Artikel hinzufügen' : 'Aufgabe hinzufügen');
   segmenteSetzen();
   $('fin-uebersicht').hidden = S.finAnsicht !== 'uebersicht';
   $('fin-verlauf').hidden = S.finAnsicht !== 'verlauf';
-  $('todo-input').placeholder = S.todoListe === 'studium' ? 'Neue Aufgabe fürs Studium' : 'Neue Aufgabe';
+  $('todo-input').placeholder = S.todoListe === 'studium' ? 'Neue Aufgabe' : 'Neue Aufgabe';
   render();
 }
 $('tabbar').addEventListener('click', (e) => {

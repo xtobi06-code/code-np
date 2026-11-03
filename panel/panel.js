@@ -1,14 +1,14 @@
 import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
-import { kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
+import { module as modulListe, kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
 import { icon, wetterSymbol } from '../shared/icons.js';
 import { erstelleSzene } from '../shared/scene.js';
 import { ordner, rohdatei } from '../shared/github.js';
-import { WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, euro0, hexRgba, kwKey, montag, addDays, fmtDM } from '../shared/util.js';
+import { uid, isoZeit, WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, euro0, hexRgba, kwKey, montag, addDays, fmtDM } from '../shared/util.js';
 
 const $ = (id) => document.getElementById(id);
-const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'termine.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
+const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'einkauf.json', 'termine.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
 const LS = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
@@ -32,6 +32,9 @@ $('ic-leben').innerHTML = icon('haus', 16, 2.2);
 $('ic-leben').style.setProperty('--ic', 'linear-gradient(160deg, #a3a1ff, #6461f0)');
 $('ic-licht').innerHTML = icon('lampe', 16, 2.2);
 $('ic-licht').style.setProperty('--ic', 'linear-gradient(160deg, #ffd84d, #ffaa00)');
+$('ic-einkauf').innerHTML = icon('wagen', 16, 2.2);
+$('ic-einkauf').style.setProperty('--ic', 'linear-gradient(160deg, #ffb340, #ff8a00)');
+document.querySelectorAll('.plus-k').forEach((b) => { b.innerHTML = icon('plus', 18, 2.6); });
 
 /* ---------- Seiten und Gesten ---------- */
 function zeige(i, sofort = false) {
@@ -359,6 +362,7 @@ function status(art, text) {
 }
 function alles() {
   listen();
+  einkaufVorschau();
   licht();
   stapelRendern();
   ruheInfo();
@@ -387,7 +391,7 @@ await laden();
 hintergrund();
 ladeWetter();
 haltWachen();
-starteZyklus(() => laden(['aufgaben.json', 'einstellungen.json', 'termine.json']), 45);
+starteZyklus(() => laden(['aufgaben.json', 'einkauf.json', 'einstellungen.json', 'termine.json']).then(hintergrund), 45);
 starteZyklus(() => { laden(); hintergrund(); }, 300);
 starteZyklus(ladeWetter, 900);
 starteZyklus(() => { szenenTakt(); stapelRendern(); ruheInfo(); }, 60);
@@ -425,3 +429,134 @@ addEventListener('resize', () => { if (innerWidth !== breite) { breite = innerWi
     if (taps.length >= 3) { taps = []; info(); }
   });
 }
+
+
+/* ---------- Dialoge: Aufgabe hinzufügen, Einkaufsliste ---------- */
+const dlg = $('dialog');
+let dlgArt = null;
+let dlgZeit = 0;
+function dialogAuf(html, art) {
+  dlg.innerHTML = html;
+  dlgArt = art;
+  dlgZeit = Date.now();
+  document.body.classList.add('dialog-an');
+  const f = dlg.querySelector('.d-feld');
+  if (f) setTimeout(() => f.focus(), 60);
+}
+function dialogZu() {
+  document.body.classList.remove('dialog-an');
+  dlgArt = null;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+$('dialog-schleier').addEventListener('click', dialogZu);
+setInterval(() => { if (dlgArt && Date.now() - dlgZeit > 120000) dialogZu(); }, 5000);
+dlg.addEventListener('pointerdown', () => { dlgZeit = Date.now(); });
+dlg.addEventListener('input', () => { dlgZeit = Date.now(); });
+
+function kopf(titel) {
+  return `<div class="d-kopf"><b>${esc(titel)}</b><button class="d-zu" data-zu aria-label="Schließen">${icon('x', 18, 2.4)}</button></div>`;
+}
+function aufgabeDialog(listeName) {
+  const st = listeName === 'studium';
+  const mods = Object.keys(modulListe());
+  const chips = (name, opts, wahl) => `<div class="d-chips">${opts.map(([v, t]) => `<button class="d-chip${wahl === v ? ' an' : ''}" data-${name}="${esc(v)}">${esc(t)}</button>`).join('')}</div>`;
+  const zeichne = () => {
+    const a = dlgArt;
+    dlg.innerHTML = `${kopf(st ? 'Neue Aufgabe · Studium' : 'Neue Aufgabe · Leben')}
+      <input class="d-feld" id="d-titel" placeholder="Was ist zu tun?" enterkeyhint="done" autocomplete="off" value="${esc(a.titel)}">
+      ${st ? `<div class="d-label">Modul</div>${chips('modul', [['', 'Keins'], ...mods.map((m) => [m, m])], a.modul)}` : ''}
+      <div class="d-label">Fällig</div>${chips('faellig', [['', 'Ohne Datum'], ['heute', 'Heute'], ['morgen', 'Morgen']], a.faellig)}
+      <button class="d-ok" id="d-ok" ${a.titel.trim() ? '' : 'disabled'}>Hinzufügen</button>`;
+  };
+  dialogAuf('', { typ: 'aufgabe', liste: listeName, titel: '', modul: '', faellig: '', zeichne });
+  zeichne();
+  setTimeout(() => $('d-titel') && $('d-titel').focus(), 60);
+}
+function aufgabeSpeichern() {
+  const a = dlgArt;
+  const titel = a.titel.trim();
+  if (!titel) return;
+  const neu = { id: uid('a'), liste: a.liste, titel, status: 'offen', erstellt: isoZeit(new Date()), erledigt: null };
+  if (a.liste === 'studium' && a.modul) neu.modul = a.modul;
+  if (a.faellig) neu.faellig = isoDate(addDays(new Date(), a.faellig === 'morgen' ? 1 : 0));
+  aendereOp('aufgaben.json', { liste: 'aufgaben', neu }, 'Neue Aufgabe').catch(() => {});
+  dialogZu();
+  listen();
+  toast('Aufgabe hinzugefügt');
+}
+
+function einkaufArtikel() { return (F['einkauf.json']?.artikel || []).filter((a) => a.status !== 'archiv'); }
+function einkaufVorschau() {
+  const offen = einkaufArtikel().filter((a) => a.status === 'offen').sort((x, y) => (x.zeit || '').localeCompare(y.zeit || ''));
+  $('n-einkauf').textContent = offen.length ? String(offen.length) : '';
+  const max = 3;
+  $('einkauf-vorschau').innerHTML = offen.length
+    ? offen.slice(0, max).map((a) => `<span>${esc(a.text)}</span>`).join('') + (offen.length > max ? `<span class="leise">+ ${offen.length - max} weitere</span>` : '')
+    : '<span class="leise">Liste ist leer</span>';
+}
+function einkaufDialog() {
+  const offen = einkaufArtikel().filter((a) => a.status === 'offen').sort((x, y) => (x.zeit || '').localeCompare(y.zeit || ''));
+  const erl = einkaufArtikel().filter((a) => a.status === 'erledigt').sort((x, y) => (y.erledigt || '').localeCompare(x.erledigt || ''));
+  const zeile = (a) => `<button class="d-art${a.status === 'erledigt' ? ' erl' : ''}" data-art="${esc(a.id)}"><span class="kreis">${icon('check', 14, 3.2)}</span>${esc(a.text)}</button>`;
+  const alt = dlg.querySelector('.d-feld');
+  const text = alt ? alt.value : '';
+  dlg.innerHTML = `${kopf('Einkauf')}
+    <input class="d-feld" id="d-einkauf" placeholder="Artikel hinzufügen (mehrere mit Komma)" enterkeyhint="done" autocomplete="off" value="${esc(text)}">
+    <div class="d-liste">${offen.length || erl.length ? offen.map(zeile).join('') + erl.map(zeile).join('') : '<div class="d-art" style="color:rgba(255,255,255,.5)">Liste ist leer</div>'}</div>
+    ${erl.length ? '<button class="d-text-knopf" data-aufraeumen>Erledigte entfernen</button>' : ''}`;
+  einkaufVorschau();
+}
+function einkaufOp(op, msg) {
+  aendereOp('einkauf.json', { liste: 'artikel', ...op }, msg).catch(() => {});
+  einkaufDialog();
+}
+$('einkauf-widget').addEventListener('click', () => { dialogAuf('', { typ: 'einkauf' }); einkaufDialog(); const f = $('d-einkauf'); if (f) f.focus(); });
+document.addEventListener('click', (e) => {
+  const neuBtn = e.target.closest('[data-neu]');
+  if (neuBtn) { aufgabeDialog(neuBtn.dataset.neu); return; }
+  if (!dlgArt || !dlg.contains(e.target)) return;
+  if (e.target.closest('[data-zu]')) return dialogZu();
+  if (dlgArt.typ === 'aufgabe') {
+    const m = e.target.closest('[data-modul]');
+    const f = e.target.closest('[data-faellig]');
+    if (m) { dlgArt.modul = m.dataset.modul; dlgArt.zeichne(); $('d-titel').focus(); }
+    else if (f) { dlgArt.faellig = f.dataset.faellig; dlgArt.zeichne(); $('d-titel').focus(); }
+    else if (e.target.closest('#d-ok')) aufgabeSpeichern();
+  } else if (dlgArt.typ === 'einkauf') {
+    const a = e.target.closest('[data-art]');
+    if (a) {
+      const art = einkaufArtikel().find((x) => x.id === a.dataset.art);
+      if (!art) return;
+      const status = art.status === 'erledigt' ? 'offen' : 'erledigt';
+      einkaufOp({ ids: [art.id], felder: { status, erledigt: status === 'erledigt' ? isoZeit(new Date()) : null } }, 'Einkauf abgehakt');
+    } else if (e.target.closest('[data-aufraeumen]')) {
+      const ids = einkaufArtikel().filter((x) => x.status === 'erledigt').map((x) => x.id);
+      einkaufOp({ ids, felder: { status: 'archiv' } }, 'Erledigte entfernt');
+    }
+  }
+});
+dlg.addEventListener('input', (e) => {
+  if (dlgArt && dlgArt.typ === 'aufgabe' && e.target.id === 'd-titel') {
+    dlgArt.titel = e.target.value;
+    const ok = $('d-ok');
+    if (ok) ok.disabled = !dlgArt.titel.trim();
+  }
+});
+dlg.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !dlgArt) return;
+  e.preventDefault();
+  if (dlgArt.typ === 'aufgabe' && e.target.id === 'd-titel') aufgabeSpeichern();
+  if (dlgArt.typ === 'einkauf' && e.target.id === 'd-einkauf') {
+    const teile = e.target.value.split(',').map((t) => t.trim()).filter(Boolean);
+    if (!teile.length) return;
+    e.target.value = '';
+    const neu = teile.map((text) => ({ id: uid('e'), text, status: 'offen', zeit: isoZeit(new Date()), erledigt: null }));
+    einkaufOp({ neu }, 'Einkauf hinzugefügt');
+    $('d-einkauf').focus();
+  }
+});
+
+// Nach Rückkehr aus den Einstellungen (Seite kommt aus dem Cache): frisch laden, Hintergrund anwenden.
+const auffrischen = () => laden(['aufgaben.json', 'einkauf.json', 'einstellungen.json', 'termine.json']).then(hintergrund);
+addEventListener('pageshow', (e) => { if (e.persisted) auffrischen(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') auffrischen(); });

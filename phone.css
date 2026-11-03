@@ -1,4 +1,4 @@
-main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 14px) 16px calc(120px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 24px) 16px calc(120px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
 .tint { position: fixed; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none; transition: background .6s;
   background: radial-gradient(120% 100% at 15% 0%, var(--tint-farbe, rgba(0,122,255,.16)), transparent 70%); }
 

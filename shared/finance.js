@@ -52,8 +52,9 @@ export function uebersicht(kosten, kats, einst, zeitraum, jetzt = new Date()) {
 }
 
 export function verlauf(kosten, kat, jetzt = new Date()) {
-  const bs = aktive(kosten).filter((b) => !kat || b.kategorie === kat);
-  const alle = aktive(kosten).map((b) => b.datum.slice(0, 7)).sort();
+  const fest = aktive(kosten).filter((b) => b.quelle !== 'dauer'); // Fixkosten sagen nichts über Sparpotenzial aus
+  const bs = fest.filter((b) => !kat || b.kategorie === kat);
+  const alle = fest.map((b) => b.datum.slice(0, 7)).sort();
   let monate = letzteMonate(12, jetzt);
   if (alle[0]) monate = monate.filter((m) => m >= alle[0]);
   return monate.map((m) => ({ monat: m, wert: bs.filter((b) => b.datum.startsWith(m)).reduce((s, b) => s + b.betrag, 0) }));
@@ -64,7 +65,7 @@ export function dauerFaellig(dauer, kosten, jetzt = new Date()) {
   const ids = new Set((kosten?.buchungen || []).map((b) => b.id));
   return (dauer?.posten || [])
     .filter((p) => p.aktiv !== false && Number(p.betrag) > 0)
-    .map((p) => ({ id: `dauer-${p.id}-${m}`, datum: `${m}-01T00:00:00`, kategorie: p.kategorie, betrag: Number(p.betrag), text: p.name, quelle: 'dauer' }))
+    .map((p) => ({ id: `dauer-${p.id}-${m}`, datum: `${m}-01T00:00:00`, kategorie: p.kategorie || '', betrag: Number(p.betrag), text: p.name, quelle: 'dauer' }))
     .filter((b) => !ids.has(b.id));
 }
 

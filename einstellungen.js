@@ -62,7 +62,6 @@ function finanzenHtml() {
     <input class="links" style="flex:1 1 120px" data-p="dauer.${i}.name" value="${esc(d.name)}" placeholder="Name, z. B. Mobilfunk">
     <button class="x" data-weg="dauer.${i}" aria-label="Entfernen">${icon('x', 18)}</button>
     <div style="flex-basis:100%;display:flex;align-items:center;gap:10px;padding-left:63px;font-size:15px">
-      <select data-p="dauer.${i}.kategorie" style="text-align:left">${S.kats.map((k) => `<option ${k.name === d.kategorie ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
       <span style="flex:1"></span><input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> € pro Monat</div></div>`).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="dauer">${'Dauerkosten hinzufügen'}</button></div></div>
   ${knoepfe('finanzen')}`;
@@ -178,7 +177,7 @@ function panelHtml() {
     <div class="zeile"><span class="lbl">Bewegter Hintergrund</span>${schalter('panel.bewegung', p.bewegung !== false)}</div>
     <div class="zeile"><span class="lbl">Karten wechseln automatisch</span>${schalter('panel.stapelAuto', p.stapelAuto === true)}</div>
     <div class="zeile"><span class="lbl">Glas-Effekt</span>${schalter('panel.glas', p.glas !== false)}</div>
-    <div class="zeile"><span class="lbl">Hintergrund</span><select data-p="panel.hintergrund" data-neu-zeichnen>${[['landschaft','Bayerischer Wald'],['gebirge','Hochgebirge'],['duenen','Hügel'],['aurora','Aurora'],['fotos','Eigene Fotos']].map(([v, n]) => `<option value="${v}" ${(p.hintergrund || 'landschaft') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="zeile"><span class="lbl">Hintergrund</span><select data-p="panel.hintergrund" data-neu-zeichnen>${[['landschaft','Bayerischer Wald'],['gebirge','Hochgebirge'],['duenen','Hügel'],['aurora','Himmel (ruhig)'],['abendrot','Abendrot'],['ozean','Ozean'],['minze','Minze'],['violett','Violett'],['graphit','Graphit'],['fotos','Eigene Fotos']].map(([v, n]) => `<option value="${v}" ${(p.hintergrund || 'landschaft') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     ${p.hintergrund === 'fotos' ? `<div class="zeile"><span class="lbl">Foto wechseln alle</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="panel.fotoMinuten" value="${esc(p.fotoMinuten)}"> Min.</div>` : ''}
   </div>
   <p class="fuss">Nachts zeigt das Panel nur eine gedimmte rote Uhr, Antippen weckt es für 90 Sekunden. Läuft das iPad ruckelig oder warm, schalte Bewegung oder Glas-Effekt aus.</p>
@@ -299,7 +298,7 @@ document.addEventListener('input', (e) => {
 });
 
 const NEU = {
-  dauer: () => ({ id: uid('d'), name: '', kategorie: 'Digital', betrag: 0, aktiv: true }),
+  dauer: () => ({ id: uid('d'), name: '', betrag: 0, aktiv: true }),
   licht: () => ({ name: 'Neu', kurzbefehl: '', symbol: 'lampe', farbe: '#FFD60A', favorit: false }),
   module: () => ({ k: 'NEU', name: '', farbe: '#A0A4AE' }),
   pausen: () => ({ name: 'Feiertag', von: '', bis: '' }),
