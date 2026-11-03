@@ -1,5 +1,5 @@
 import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi } from '../shared/core.js';
-import { offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
+import { erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
 import { icon, wetterSymbol } from '../shared/icons.js';
@@ -275,7 +275,10 @@ function wocheKarte() {
   const k = kwKey(jetzt);
   const mo = isoDate(montag(jetzt));
   const so = isoDate(addDays(montag(jetzt), 6));
-  const auf = (F['aufgaben.json']?.aufgaben || []).filter((a) => a.liste === 'studium' && a.regel && (a.kw ? a.kw === k : a.datum >= mo && a.datum <= so));
+  const alle = F['aufgaben.json']?.aufgaben || [];
+  // Die komplette Woche: schon erzeugte Aufgaben plus die, die in den nächsten Tagen noch entstehen.
+  const kommend = erzeugen(F['einstellungen.json'], F['regeln.json']?.regeln || [], alle, addDays(montag(jetzt), 6)).map((a) => ({ ...a, status: 'offen' }));
+  const auf = [...alle, ...kommend].filter((a) => a.liste === 'studium' && a.regel && (a.kw ? a.kw === k : a.datum >= mo && a.datum <= so));
   if (!auf.length) return null;
   const fertig = auf.filter((a) => a.status === 'erledigt').length;
   const nachModul = {};
@@ -389,3 +392,10 @@ starteZyklus(ladeWetter, 900);
 starteZyklus(() => { szenenTakt(); stapelRendern(); ruheInfo(); }, 60);
 let breite = innerWidth;
 addEventListener('resize', () => { if (innerWidth !== breite) { breite = innerWidth; listen(); } });
+
+// iPadOS verschiebt manchmal die Ansicht; immer zurück nach oben links.
+{
+  const zurueck = () => { if (scrollY || scrollX) scrollTo(0, 0); };
+  ['resize', 'orientationchange', 'pageshow', 'scroll'].forEach((n) => addEventListener(n, zurueck, { passive: true }));
+  document.addEventListener('visibilitychange', zurueck);
+}

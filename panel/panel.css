@@ -3,7 +3,7 @@
 /* 1rem = 16px auf dem iPad 8 (1080 × 810), skaliert auf andere Größen */
 html { font-size: min(calc(100vw / 67.5), calc(100vh / 50.625)); }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: #02040b; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+html, body { margin: 0; position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #02040b; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; }
 .ic { display: block; flex: none; }
 [hidden] { display: none !important; }
@@ -77,8 +77,6 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 .k-text { display: flex; flex-direction: column; }
 .k-name { font-size: 1.0625rem; font-weight: 650; line-height: 1.15; }
 .k-sub { font-size: .75rem; color: var(--t2); font-weight: 500; margin-top: .1rem; }
-.kachel.an { background: rgba(255,255,255,.93); color: #111; border-color: transparent; }
-.kachel.an .k-sub { color: rgba(0,0,0,.5); }
 
 /* Smart Stack */
 .stapel { flex: 1; padding: 0; }
@@ -127,8 +125,7 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 .seiten-kopf .unter { font-size: 1.0625rem; color: var(--t2); }
 .kacheln.gross { flex: none; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 9.4rem; gap: 1rem; margin: 0; overflow-y: auto; max-height: 100%; }
 .kacheln.gross .kachel { border-radius: 1.75rem; padding: 1.1rem; background: rgba(14, 20, 36, .34); -webkit-backdrop-filter: blur(1.5rem) saturate(170%); backdrop-filter: blur(1.5rem) saturate(170%); border-color: rgba(255,255,255,.22); }
-.kacheln.gross .kachel.an { background: rgba(255,255,255,.93); }
-.kacheln.gross .k-ic { width: 3.3rem; height: 3.3rem; }
+.kacheln.gross .kacheln.gross .k-ic { width: 3.3rem; height: 3.3rem; }
 .kacheln.gross .k-ic .ic { width: 1.75rem; height: 1.75rem; }
 .kacheln.gross .k-name { font-size: 1.375rem; }
 .kacheln.gross .k-sub { font-size: .875rem; }
