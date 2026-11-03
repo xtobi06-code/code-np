@@ -157,10 +157,8 @@ function shortcutUrl(name) {
   return `shortcuts://run-shortcut?name=${encodeURIComponent(name)}`;
 }
 function kachel(m, i, gross) {
-  const zuletzt = LS.get('np-licht', null);
-  const an = zuletzt && zuletzt.name === m.name;
   const c = m.farbe || '#FFD60A';
-  return `<a class="kachel${an ? ' an' : ''}" data-licht="${i}" href="${esc(shortcutUrl(m.kurzbefehl || m.name))}">
+  return `<a class="kachel" data-licht="${i}" href="${esc(shortcutUrl(m.kurzbefehl || m.name))}">
     <span class="k-ic" style="--c:${c};--glow:${hexRgba(c, 0.45)}">${icon(m.symbol || 'lampe', 22, 2.2)}</span>
     ${gross && m.favorit ? `<span class="stern-mark">${icon('stern', 16, 2.2)}</span>` : ''}
     <span class="k-text"><span class="k-name">${esc(m.name)}</span></span></a>`;
@@ -172,7 +170,6 @@ function licht() {
   $('licht-fav').innerHTML = fav.slice(0, 4).map(([m, i]) => kachel(m, i, false)).join('');
   $('n-licht').textContent = modi.length > 4 ? `(${modi.length})` : '';
   $('licht-alle').innerHTML = modi.map((m, i) => kachel(m, i, true)).join('');
-  const z = LS.get('np-licht', null);
   $('licht-zuletzt').textContent = '';
 }
 document.addEventListener('click', (e) => {
@@ -180,8 +177,7 @@ document.addEventListener('click', (e) => {
   if (!k) return;
   const m = lichtModi()[Number(k.dataset.licht)];
   if (!m) return;
-  LS.set('np-licht', { name: m.name, zeit: clockText(new Date()) });
-  setTimeout(() => { licht(); if (seite === 1) zeige(0); }, 300);
+  setTimeout(() => { if (seite === 1) zeige(0); }, 300);
 });
 
 /* ---------- Wetter ---------- */
