@@ -10,11 +10,11 @@
 <title>Einstellungen</title>
 <link rel="stylesheet" href="shared/style.css">
 <style>
-  main { padding: 0 16px calc(40px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
-  .leiste { position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: calc(env(safe-area-inset-top) + 6px) 16px 8px; background: linear-gradient(rgba(0,0,0,.88), rgba(0,0,0,.6)); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%); border-bottom: .5px solid rgba(255,255,255,.1); }
-  .zurueck { display: inline-flex; align-items: center; gap: 2px; font-size: 17px; margin: 0 0 0 -6px; padding: 6px 4px; }
+  main { padding: calc(env(safe-area-inset-top) + 62px) 16px calc(40px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+  .leiste { position: fixed; inset: 0 0 auto 0; height: 0; z-index: 30; }
+  .zurueck { position: fixed; z-index: 30; top: calc(env(safe-area-inset-top) + 8px); left: 16px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text); background: var(--glas); -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%); border: .5px solid var(--glas-rand); box-shadow: var(--glas-schatten), inset 0 1px 0 rgba(255,255,255,.14); }
   .zurueck .ic { transform: rotate(180deg); }
-  h1 { font-size: 34px; font-weight: 700; margin: 4px 0 18px; }
+  h1 { font-size: 34px; font-weight: 700; margin: 0 0 18px; }
   .zeile label, .zeile .lbl { flex: 1; min-width: 0; }
   .zeile label.schalter { flex: none; }
   .zeile input:not([type=checkbox]), .zeile select { border: 0; background: transparent; text-align: right; outline: none; min-width: 0; font-size: 17px; color: var(--t2); }

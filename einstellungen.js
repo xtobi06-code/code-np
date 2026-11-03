@@ -8,7 +8,8 @@ import { esc, uid, parseBetrag, euro } from './shared/util.js';
 const $ = (id) => document.getElementById(id);
 const vomPanel = document.referrer.includes('/panel/');
 $('zurueck').href = vomPanel ? 'panel/' : './';
-$('zurueck').innerHTML = icon('pfeil', 22, 2.5) + (vomPanel ? 'Panel' : 'Zurück');
+$('zurueck').innerHTML = icon('pfeil', 22, 2.5);
+$('zurueck').setAttribute('aria-label', vomPanel ? 'Zurück zum Panel' : 'Zurück');
 
 const DATEIEN = ['einstellungen.json', 'regeln.json', 'kategorien.json', 'dauerkosten.json'];
 const WT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
