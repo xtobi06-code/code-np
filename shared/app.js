@@ -1,36 +1,18 @@
-import { lesen, FehlerToken } from './github.js';
-import { ladeWetter, wetterZeile, KLEIDUNG_STANDARD, REGEN_SCHWELLE } from './weather.js';
+import { ladeWetter, KLEIDUNG_STANDARD, REGEN_SCHWELLE } from './weather.js';
+import { icon, wetterSymbol } from './icons.js';
+import { esc } from './util.js';
 
-export async function aktualisiereWetter(el) {
-  let stufen = KLEIDUNG_STANDARD;
-  let regen = REGEN_SCHWELLE;
-  try {
-    const s = await lesen('einstellungen.json');
-    if (s && s.data.kleidung) {
-      stufen = s.data.kleidung.stufen || stufen;
-      regen = s.data.kleidung.regenSchwelle ?? regen;
-    }
-  } catch { /* Standardwerte */ }
-  try {
-    el.textContent = wetterZeile(await ladeWetter(stufen, regen));
-  } catch {
-    el.textContent = 'Wetter nicht verfügbar';
-  }
+export async function holeWetter(einst) {
+  const k = einst?.kleidung;
+  return ladeWetter(k?.stufen || KLEIDUNG_STANDARD, k?.regenSchwelle ?? REGEN_SCHWELLE);
 }
 
-// Zeigt den Verbindungsstatus zum Daten-Repo und liefert die Einstellungen zurück.
-export async function pruefeSync(el) {
-  try {
-    const s = await lesen('einstellungen.json');
-    if (!s) { el.innerHTML = '<span class="punkt warn"></span>Keine Daten gefunden'; return null; }
-    el.innerHTML = `<span class="punkt ${s.offline ? 'warn' : 'ok'}"></span>${s.offline ? 'Offline, Zwischenspeicher' : 'Verbunden'}`;
-    return s.data;
-  } catch (e) {
-    const kein = e instanceof FehlerToken;
-    el.innerHTML = `<span class="punkt bad"></span>${kein ? 'Nicht verbunden' : 'Fehler'}`;
-    el.title = e.message;
-    return null;
-  }
+export function wetterHtml(w, size = 22) {
+  const e = w.empfehlung;
+  const kleidung = e ? esc(e.kleidung) + (e.schirm ? ' · Schirm' : '') : '';
+  return `<span class="w-ic">${icon(wetterSymbol(w.code), size)}</span>`
+    + `<span class="w-temp">${w.temperatur}°</span>`
+    + (kleidung ? `<span class="w-kl">${w.morgen ? 'Morgen: ' : ''}${kleidung}</span>` : '');
 }
 
 export function starteZyklus(fn, sekunden) {
@@ -39,9 +21,29 @@ export function starteZyklus(fn, sekunden) {
   document.addEventListener('visibilitychange', lauf);
 }
 
-export async function haltWachen() {
+let lock = null;
+export function haltWachen() {
   if (!('wakeLock' in navigator)) return;
-  const an = async () => { try { await navigator.wakeLock.request('screen'); } catch { /* ignorieren */ } };
-  await an();
+  const an = async () => {
+    if (lock && !lock.released) return;
+    try { lock = await navigator.wakeLock.request('screen'); } catch { /* braucht evtl. Tippen */ }
+  };
+  an();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) an(); });
+  document.addEventListener('pointerdown', an);
+}
+
+let toastTimer = null;
+export function toast(text, aktion, dauer = 5000) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<span>${esc(text)}</span>${aktion ? `<button type="button">${esc(aktion.label)}</button>` : ''}`;
+  if (aktion) el.querySelector('button').onclick = () => { el.classList.remove('an'); aktion.fn(); };
+  el.classList.add('an');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('an'), dauer);
 }

@@ -2,54 +2,109 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Panel">
+<meta name="theme-color" content="#07080f">
 <title>Panel</title>
-<link rel="stylesheet" href="../shared/style.css">
 <style>
-  body { display: flex; flex-direction: column; height: 100vh; padding: 14px 16px; gap: 12px; overflow: hidden; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  #datum { font-size: 22px; font-weight: 600; white-space: nowrap; }
-  #uhr { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  #wetter { font-size: 18px; padding: 6px 16px; }
-  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 12px; }
-  .spalte { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
-  .leer { color: var(--muted); font-size: 15px; }
-  footer { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  :root { --text: #fff; --t2: rgba(255,255,255,.62); --t3: rgba(255,255,255,.38); --karte: rgba(255,255,255,.07); --rand: rgba(255,255,255,.08); --linie: rgba(255,255,255,.07); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    background:
+      radial-gradient(900px 700px at -5% -10%, rgba(64, 92, 255, .38), transparent 60%),
+      radial-gradient(800px 650px at 105% 110%, rgba(255, 92, 140, .26), transparent 60%),
+      radial-gradient(700px 500px at 70% -20%, rgba(0, 200, 190, .14), transparent 60%),
+      #07080f;
+  }
+  .app { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: 16px;
+    padding: max(18px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    transition: opacity .8s; }
+  body.nacht .app { opacity: .42; }
+
+  header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+  .datum .wt { font-size: 30px; font-weight: 700; letter-spacing: -.4px; line-height: 1.1; }
+  .datum .zeile2 { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 18px; color: var(--t2); }
+  .kw { font-size: 14px; font-weight: 700; color: #fff; background: rgba(255,255,255,.14); border-radius: 999px; padding: 3px 10px; letter-spacing: .02em; }
+  .uhr { justify-self: end; font-size: 86px; font-weight: 200; letter-spacing: -3px; line-height: .9; font-variant-numeric: tabular-nums; }
+  .wetter { display: flex; align-items: center; gap: 10px; padding: 10px 18px 10px 14px; border-radius: 999px; background: var(--karte); border: 1px solid var(--rand); max-width: 430px; }
+  .wetter .w-ic { color: #FFD60A; display: flex; }
+  .wetter .w-temp { font-size: 24px; font-weight: 600; }
+  .wetter .w-kl { font-size: 16px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  main { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; min-height: 0; }
+  .karte { background: var(--karte); border: 1px solid var(--rand); border-radius: 28px; padding: 16px 18px 10px; display: flex; flex-direction: column; min-height: 0; }
+  .karte h2 { margin: 0 0 4px; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); display: flex; justify-content: space-between; align-items: center; }
+  .karte h2 .zahl { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--t2); font-weight: 600; }
+  .liste { flex: 1; min-height: 0; overflow: hidden; }
+  .task { display: flex; align-items: center; gap: 13px; height: 54px; border-bottom: 1px solid var(--linie); }
+  .task:last-child { border-bottom: 0; }
+  .kreis { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 2.5px solid var(--c); display: grid; place-items: center; color: transparent; transition: background .2s, transform .2s; }
+  .task:active .kreis { transform: scale(.88); }
+  .task.fertig .kreis { background: var(--c); color: #fff; }
+  .task.fertig .titel { color: var(--t3); text-decoration: line-through; }
+  .titel { flex: 1; min-width: 0; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .titel b { color: var(--c); font-weight: 700; }
+  .meta { font-size: 15px; color: var(--t3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .task.heute .meta { color: var(--c); font-weight: 600; }
+  .mehr { font-size: 15px; color: var(--t3); padding: 8px 0 2px; }
+  .leer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 100%; color: var(--t3); font-size: 17px; }
+  .leer .ic { color: #30D158; }
+
+  .rechts { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  .heute { flex: none; max-height: 44%; }
+  .termin { display: flex; gap: 12px; align-items: baseline; font-size: 18px; padding: 6px 0; }
+  .termin .zeit { width: 50px; flex: none; color: var(--t2); font-size: 16px; font-variant-numeric: tabular-nums; }
+  .termin .punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; align-self: center; }
+  .termin.vorbei { opacity: .38; }
+  .termin .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .licht { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 12px; }
+  .lb { border: 0; border-radius: 24px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; text-align: left; color: #fff; font: inherit; text-decoration: none; transition: transform .15s; min-height: 0; overflow: hidden; }
+  .lb:active { transform: scale(.95); }
+  .lb .knopf { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #111; }
+  .lb .name { font-size: 19px; font-weight: 600; }
+  .lb.breit { grid-column: span 2; flex-direction: row; align-items: center; gap: 14px; justify-content: flex-start; }
+
+  footer { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--t3); gap: 16px; }
+  footer a { color: var(--t3); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+  .punktstatus { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--t3); }
+  .punktstatus.ok { background: #30D158; } .punktstatus.warn { background: #FF9F0A; } .punktstatus.bad { background: #FF453A; }
+  #budget b { color: var(--t2); font-weight: 600; }
+
+  #toast { position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, 140%); background: rgba(40,40,46,.96); border: 1px solid var(--rand); color: #fff; border-radius: 999px; padding: 12px 12px 12px 22px; display: flex; gap: 16px; align-items: center; font-size: 17px; transition: transform .3s; z-index: 10; }
+  #toast.an { transform: translate(-50%, 0); }
+  #toast button { background: #0A84FF; color: #fff; border: 0; border-radius: 999px; padding: 8px 16px; font: inherit; font-weight: 600; }
+  .hinweis { position: fixed; inset: 0; display: none; place-items: center; background: rgba(7,8,15,.9); z-index: 20; text-align: center; font-size: 20px; }
+  .hinweis a { color: #0A84FF; }
 </style>
 </head>
 <body>
-<header>
-  <span id="datum">…</span>
-  <span id="wetter" class="chip">Wetter lädt …</span>
-  <span id="uhr">--:--</span>
-</header>
-<main>
-  <section class="card"><h2>Studium</h2><p class="leer">Aufgaben folgen in Phase 2.</p></section>
-  <section class="card"><h2>Leben</h2><p class="leer">Aufgaben folgen in Phase 2.</p></section>
-  <div class="spalte">
-    <section class="card"><h2>Heute</h2><p class="leer">Termine folgen.</p></section>
-    <section class="card" style="flex:1"><h2>Licht</h2><p class="leer">Buttons folgen.</p></section>
-  </div>
-</main>
-<footer>
-  <span id="sync">…</span>
-  <a href="../einstellungen.html">Einstellungen</a>
-</footer>
-<script type="module">
-  import { startClock, startHeader } from '../shared/util.js';
-  import { aktualisiereWetter, pruefeSync, starteZyklus, haltWachen } from '../shared/app.js';
-  startHeader(document.getElementById('datum'));
-  startClock(document.getElementById('uhr'));
-  const wetter = () => aktualisiereWetter(document.getElementById('wetter'));
-  const sync = () => pruefeSync(document.getElementById('sync'));
-  wetter(); sync();
-  starteZyklus(wetter, 900);
-  starteZyklus(sync, 45);
-  haltWachen();
-</script>
+<div class="app">
+  <header>
+    <div class="datum"><div class="wt" id="wt">…</div><div class="zeile2"><span id="dt"></span><span class="kw" id="kw"></span></div></div>
+    <div class="wetter" id="wetter"><span class="w-kl">Wetter lädt …</span></div>
+    <div class="uhr" id="uhr">--:--</div>
+  </header>
+  <main>
+    <section class="karte"><h2>Studium <span class="zahl" id="n-studium"></span></h2><div class="liste" id="studium"></div></section>
+    <section class="karte"><h2>Leben <span class="zahl" id="n-leben"></span></h2><div class="liste" id="leben"></div></section>
+    <div class="rechts">
+      <section class="karte heute"><h2 id="heute-titel">Heute</h2><div id="termine"></div></section>
+      <div class="licht" id="licht"></div>
+    </div>
+  </main>
+  <footer>
+    <span id="sync"><span class="punktstatus"></span>Verbinde …</span>
+    <span id="budget"></span>
+    <a href="../einstellungen.html" id="einst"></a>
+  </footer>
+</div>
+<div class="hinweis" id="hinweis"><div>Noch nicht verbunden.<br><br><a href="../einstellungen.html">Token in den Einstellungen eintragen</a></div></div>
+<script type="module" src="panel.js"></script>
 </body>
 </html>
