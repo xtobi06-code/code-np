@@ -386,14 +386,14 @@ function renderFinanzen() {
     const offen = S.offenKat === x.name && x.eintraege.length > 0;
     const eintraege = offen ? `<div class="eintraege">${x.eintraege.length ? x.eintraege.map((b) => `
       <div class="eintrag" data-buchung="${esc(b.id)}"><span class="neben">${fmtDM(b.datum)}</span><span class="haupt">${esc(b.text || x.name)}</span><span class="neben">${euro(b.betrag)}</span></div>`).join('') : '<div class="eintrag"><span class="haupt neben">Keine Einträge in diesem Zeitraum</span></div>'}</div>` : '';
-    return `<div class="zeile kat" data-kat="${esc(x.name)}"><span class="symbol" style="background:${x.farbe}">${icon(katSymbol(x.name), 17, 2.2)}</span>
+    return `<div class="zeile kat" data-kat="${esc(x.name)}"><span class="symbol" style="background:${x.farbe}">${icon(katSymbol(x.name, x.symbol), 17, 2.2)}</span>
       <div class="haupt"><div class="oben"><span>${esc(x.name)}</span><span class="betrag">${euro(x.wert)}${x.budget ? ` <small>/ ${euro0(x.budget)}</small>` : ''}</span></div>
       <div class="balken"><span class="${s}" style="width:${breite}%"></span></div></div></div>${eintraege}`;
   }).join('');
   const letzte = aktive(F['kosten.json']).filter((b) => b.quelle !== 'dauer').sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 5);
   $('fin-letzte').innerHTML = letzte.length ? `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe">${letzte.map((b) => {
     const kk = katVon(b.kategorie);
-    return `<div class="zeile task buchung" data-buchung="${esc(b.id)}"><div class="vorn"><span class="symbol" style="background:${kk.farbe}">${icon(katSymbol(kk.name), 17, 2.2)}</span>
+    return `<div class="zeile task buchung" data-buchung="${esc(b.id)}"><div class="vorn"><span class="symbol" style="background:${kk.farbe}">${icon(katSymbol(kk.name, kk.symbol), 17, 2.2)}</span>
       <div class="haupt"><div>${esc(kk.name)}</div><div class="unter">${esc(fmtWtDM(b.datum))}${b.text ? ` · ${esc(b.text)}` : ''}</div></div><span class="betrag">${euro(b.betrag)}</span></div><button class="loesch" data-bloesch="${esc(b.id)}">Löschen</button></div>`;
   }).join('')}</div>` : '';
 }
@@ -481,7 +481,7 @@ document.querySelectorAll('[data-zu]').forEach((b) => { b.onclick = schliesse; }
 let wahl = null;
 let kostenId = null;
 function katwahl() {
-  $('katwahl').innerHTML = kats().map((k) => `<button style="--c:${k.farbe}" data-k="${esc(k.name)}" class="${k.name === wahl ? 'an' : ''}"><span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span>${esc(k.name)}</button>`).join('');
+  $('katwahl').innerHTML = kats().map((k) => `<button style="--c:${k.farbe}" data-k="${esc(k.name)}" class="${k.name === wahl ? 'an' : ''}"><span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name, k.symbol), 17, 2.2)}</span>${esc(k.name)}</button>`).join('');
 }
 function kostenBlatt(id = null) {
   const b = id ? aktive(F['kosten.json']).find((x) => x.id === id) : null;

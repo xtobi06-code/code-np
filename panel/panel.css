@@ -244,3 +244,5 @@ body.dialog-an .dialog { opacity: 1; pointer-events: auto; transform: translate(
 .d-art.erl .kreis { background: #ff9f0a; color: #fff; }
 .d-art .kreis .ic { width: .95rem; height: .95rem; }
 .d-text-knopf { border: 0; background: none; color: rgba(255,255,255,.7); font: inherit; font-size: 1.0625rem; padding: .5rem 0; }
+
+#app { touch-action: pan-y; }

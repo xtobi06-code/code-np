@@ -140,4 +140,4 @@ body.glasapp { --bg: #02040b; --karte: rgba(16, 22, 40, .42); --karte2: rgba(255
 .senden[hidden] { display: none; }
 
 /* Kopfzeilen-Knöpfe ohne Backdrop-Blur: der verschmiert am oberen Rand */
-.rund.glas:not(.akzent) { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(28, 28, 30, .94); border: .5px solid rgba(255, 255, 255, .16); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.rund.glas:not(.akzent) { background: rgba(40, 40, 44, .42); -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%); border: .5px solid rgba(255, 255, 255, .22); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 16px rgba(0,0,0,.25); }

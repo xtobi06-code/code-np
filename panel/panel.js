@@ -56,14 +56,20 @@ function zeige(i, sofort = false) {
 }
 let start = null;
 let gewischt = 0;
-$('app').addEventListener('pointerdown', (e) => { start = e.target.closest('.task') ? null : { x: e.clientX, y: e.clientY }; });
-$('app').addEventListener('pointerup', (e) => {
+$('app').addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY, task: !!e.target.closest('.task') }; });
+// Sobald die Geste klar waagerecht ist, wird sofort umgeschaltet (nicht erst beim Loslassen)
+$('app').addEventListener('pointermove', (e) => {
   if (!start) return;
   const dx = e.clientX - start.x;
   const dy = e.clientY - start.y;
-  start = null;
-  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.3) { gewischt = Date.now(); zeige(seite + (dx < 0 ? 1 : -1)); }
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4 && !(start.task && dx < 0)) {
+    start = null;
+    gewischt = Date.now();
+    zeige(seite + (dx < 0 ? 1 : -1));
+  }
 });
+$('app').addEventListener('pointerup', () => { start = null; });
+$('app').addEventListener('pointercancel', () => { start = null; });
 document.addEventListener('click', (e) => {
   if (Date.now() - gewischt < 350) { e.preventDefault(); e.stopPropagation(); }
 }, true);

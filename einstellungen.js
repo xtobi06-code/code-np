@@ -1,7 +1,7 @@
 import { F, ladeAlle, aendere, config, PANEL_STANDARD } from './shared/core.js';
 import { saveConfig, lesen, ordner, rohdatei, hochladen, loeschen } from './shared/github.js';
 import { icon, LICHT_SYMBOLE } from './shared/icons.js';
-import { katSymbol } from './shared/finance.js';
+import { katSymbol, KAT_ICONS } from './shared/finance.js';
 import { modulFarbe, MODULE_STANDARD, setzeModule } from './shared/tasks.js';
 import { esc, uid, parseBetrag, euro } from './shared/util.js';
 
@@ -21,7 +21,7 @@ function kopie() {
   return {
     e,
     regeln: structuredClone(F['regeln.json']?.regeln || []),
-    kats: structuredClone(F['kategorien.json']?.kategorien || []),
+    kats: structuredClone(F['kategorien.json']?.kategorien || []).map((k) => ({ ...k, _alt: k.name })),
     dauer: structuredClone(F['dauerkosten.json']?.posten || []),
     licht: structuredClone(e.licht || []),
     pausen: structuredClone(e.pausen || []),
@@ -61,10 +61,20 @@ function finanzenHtml() {
     <div class="zeile"><span class="lbl">Monatsbudget</span><input class="zahl" inputmode="decimal" data-p="e.monatsbudget" value="${esc(S.e.monatsbudget ?? '')}"> €</div>
   </div>
   <div class="gruppe-titel"><span>Budget pro Kategorie</span><span>Summe ${euro(summe)}</span></div>
-  <div class="gruppe">${S.kats.map((k, i) => (k.name === 'Sonstiges' ? (x) => x : (x) => wisch(`kats.${i}`, x))(`<div class="zeile" data-reihe="kats" style="--einzug:58px">
-    <span class="symbol" style="background:${k.farbe}">${icon(katSymbol(k.name), 17, 2.2)}</span><span class="lbl">${esc(k.name)}</span>
-    <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €${griff('kats', i)}</div>`)).join('')}</div>
-  <p class="fuss">Nach links wischen löscht eine Kategorie. Ihre bisherigen Ausgaben wandern zu Sonstiges, der alte Kategoriename steht dann als Notiz dabei.</p>
+  <div class="gruppe">${S.kats.map((k, i) => {
+    const auf = katOffen.has(i);
+    const zeile = `<div class="zeile" data-reihe="kats" style="--einzug:58px">
+    <span class="symbol" data-kat-auf="${i}" style="background:${esc(k.farbe)}">${icon(katSymbol(k.name, k.symbol), 17, 2.2)}</span><span class="lbl" data-kat-auf="${i}">${esc(k.name || 'Ohne Namen')}</span>
+    <input class="zahl" inputmode="decimal" data-p="kats.${i}.budget" value="${esc(k.budget ?? '')}"> €${griff('kats', i)}</div>
+    ${auf ? `<div class="regel"><div class="koerper">
+      ${k.name === 'Sonstiges' ? '' : `<div class="reihe"><span>Name</span><input style="flex:1" data-p="kats.${i}.name" value="${esc(k.name)}" placeholder="Name"></div>`}
+      <div class="reihe"><span>Farbe</span><input type="color" class="farbe" data-p="kats.${i}.farbe" value="${esc(k.farbe || '#8E8E93')}"></div>
+      <div class="reihe"><span>Symbol</span><div class="symbole">${KAT_ICONS.map((sy) => `<button class="${sy === katSymbol(k.name, k.symbol) ? 'an' : ''}" data-ksym="${i}:${sy}">${icon(sy, 18)}</button>`).join('')}</div></div>
+    </div></div>` : ''}`;
+    return k.name === 'Sonstiges' ? zeile : wisch(`kats.${i}`, zeile);
+  }).join('')}
+    <div class="zeile"><button class="textknopf" style="padding:0" data-neu="kats">Kategorie hinzufügen</button></div></div>
+  <p class="fuss">Tippe auf eine Kategorie, um Name, Farbe und Symbol zu ändern. Nach links wischen löscht sie: Ihre bisherigen Ausgaben wandern zu Sonstiges, der alte Name steht dann als Notiz dabei.</p>
   <div class="gruppe-titel">Dauerkosten (am Monatsersten gebucht)</div>
   <div class="gruppe">${S.dauer.map((d, i) => wisch(`dauer.${i}`, `<div class="zeile" data-reihe="dauer" style="flex-wrap:wrap;row-gap:4px">
     ${schalter(`dauer.${i}.aktiv`, d.aktiv !== false)}
@@ -77,6 +87,7 @@ function finanzenHtml() {
 }
 
 const lichtOffen = new Set();
+const katOffen = new Set();
 function lichtHtml() {
   return `<div class="gruppe-titel"><span>Licht-Modi</span><span style="font-weight:400;color:var(--t2)">${S.licht.filter((l) => l.favorit).length} Favoriten</span></div>
   <div class="gruppe">${S.licht.map((l, i) => {
@@ -152,10 +163,10 @@ function regelnHtml() {
 
 function kleidungHtml() {
   return `<div class="gruppe-titel">Kleidungsempfehlung (gefühlte Temperatur 7 bis 20 Uhr, kälteste Stunde)</div>
-  <div class="gruppe">${S.stufen.map((s, i) => wisch(`stufen.${i}`, `<div class="zeile"><span class="lbl" style="flex:none;color:var(--t2)">unter</span>
-    <input class="zahl" style="width:44px" inputmode="numeric" data-p="stufen.${i}.bis" value="${esc(s.bis)}">°
+  <div class="gruppe">${S.stufen.map((s, i) => wisch(`stufen.${i}`, `<div class="zeile"><span class="lbl" style="flex:none;color:var(--t2)">&lt;</span>
+    <span style="display:flex;align-items:baseline;gap:3px;flex:none"><input class="zahl" style="width:34px;text-align:right" inputmode="numeric" data-p="stufen.${i}.bis" value="${esc(s.bis)}"><span>°C</span></span>
     <input class="links" style="flex:1" data-p="stufen.${i}.text" value="${esc(s.text)}">
-</div>`)).join('')}
+    </div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="stufen">Stufe hinzufügen</button></div>
     <div class="zeile"><span class="lbl">Schirm ab Regenwahrscheinlichkeit</span><input class="zahl" style="width:50px" inputmode="numeric" data-p="e.kleidung.regenSchwelle" value="${esc(S.e.kleidung?.regenSchwelle ?? 40)}"> %</div>
   </div>
@@ -328,17 +339,20 @@ const NEU = {
   pausen: () => ({ name: 'Feiertag', von: '', bis: '' }),
   regeln: () => { const r = { id: uid('r'), modul: 'NEU', typ: 'VO', art: 'tag', tage: [1], rhythmus: 'woche', aktiv: true }; offen.add(r.id); return r; },
   stufen: () => ({ bis: 25, text: '' }),
+  kats: () => ({ name: 'Neu', farbe: '#0A84FF', budget: 0, symbol: 'punkte', _alt: null }),
 };
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-neu],[data-weg],[data-hoch],[data-tag],[data-symbol],[data-auf],[data-sichern],[data-fav],[data-foto-weg],[data-licht-auf],#c-sichern,#foto-wahl');
+  const t = e.target.closest('[data-neu],[data-weg],[data-kat-auf],[data-ksym],[data-hoch],[data-tag],[data-symbol],[data-auf],[data-sichern],[data-fav],[data-foto-weg],[data-licht-auf],#c-sichern,#foto-wahl');
   if (!t) return;
   if (t.id === 'c-sichern') return verbinden();
   if (t.id === 'foto-wahl') return $('foto-datei').click();
   if (t.dataset.fotoWeg) return fotoLoeschen(t.dataset.fotoWeg);
+  if (t.dataset.katAuf) { const i = Number(t.dataset.katAuf); katOffen.has(i) ? katOffen.delete(i) : katOffen.add(i); return zeichne(); }
+  if (t.dataset.ksym) { const [i, sy] = t.dataset.ksym.split(':'); S.kats[Number(i)].symbol = sy; return zeichne(); }
   if (t.dataset.fav) { const l = S.licht[Number(t.dataset.fav)]; l.favorit = !l.favorit; return zeichne(); }
   if (t.dataset.lichtAuf) { const i = Number(t.dataset.lichtAuf); lichtOffen.has(i) ? lichtOffen.delete(i) : lichtOffen.add(i); return zeichne(); }
-  if (t.dataset.neu) { S[t.dataset.neu].push(NEU[t.dataset.neu]()); if (t.dataset.neu === 'licht') lichtOffen.add(S.licht.length - 1); return zeichne(); }
-  if (t.dataset.weg) { const [k, i] = t.dataset.weg.split('.'); S[k].splice(Number(i), 1); if (k === 'licht') lichtOffen.clear(); return zeichne(); }
+  if (t.dataset.neu) { S[t.dataset.neu].push(NEU[t.dataset.neu]()); if (t.dataset.neu === 'licht') lichtOffen.add(S.licht.length - 1); if (t.dataset.neu === 'kats') katOffen.add(S.kats.length - 1); return zeichne(); }
+  if (t.dataset.weg) { const [k, i] = t.dataset.weg.split('.'); S[k].splice(Number(i), 1); if (k === 'licht') lichtOffen.clear(); if (k === 'kats') katOffen.clear(); return zeichne(); }
   if (t.dataset.hoch) { const [k, i] = t.dataset.hoch.split('.'); const n = Number(i); if (n > 0) [S[k][n - 1], S[k][n]] = [S[k][n], S[k][n - 1]]; if (k === 'licht' && n > 0) { lichtOffen.delete(n); lichtOffen.add(n - 1); } return zeichne(); }
   if (t.dataset.tag) {
     const [i, tag] = t.dataset.tag.split(':').map(Number);
@@ -358,17 +372,22 @@ document.addEventListener('click', async (e) => {
 async function sichern(was) {
   {
     if (was === 'finanzen') {
-      const weg = (F['kategorien.json']?.kategorien || []).map((k) => k.name).filter((n) => !S.kats.some((k) => k.name === n));
-      if (weg.length) {
+      const orig = (F['kategorien.json']?.kategorien || []).map((k) => k.name);
+      const kats = S.kats.filter((k) => (k.name || '').trim()).map(({ _alt, ...k }) => ({ ...k, name: k.name.trim() }));
+      const behalten = new Set(S.kats.filter((k) => k._alt).map((k) => k._alt));
+      const umbenannt = Object.fromEntries(S.kats.filter((k) => k._alt && k._alt !== (k.name || '').trim() && (k.name || '').trim()).map((k) => [k._alt, k.name.trim()]));
+      const weg = orig.filter((n) => !behalten.has(n));
+      if (weg.length || Object.keys(umbenannt).length) {
         await aendere('kosten.json', (d) => {
           for (const b of d.buchungen || []) {
-            if (weg.includes(b.kategorie)) { b.text = b.text ? `${b.kategorie}: ${b.text}` : b.kategorie; b.kategorie = 'Sonstiges'; }
+            if (umbenannt[b.kategorie]) b.kategorie = umbenannt[b.kategorie];
+            else if (weg.includes(b.kategorie)) { b.text = b.text ? `${b.kategorie}: ${b.text}` : b.kategorie; b.kategorie = 'Sonstiges'; }
           }
           return d;
-        }, 'Kategorie gelöscht, Ausgaben zu Sonstiges');
+        }, 'Kategorien geändert');
       }
       await aendere('einstellungen.json', (d) => ({ ...d, monatsbudget: S.e.monatsbudget }), 'Budget geändert');
-      await aendere('kategorien.json', (d) => ({ ...d, kategorien: S.kats }), 'Kategorien geändert');
+      await aendere('kategorien.json', (d) => ({ ...d, kategorien: kats }), 'Kategorien geändert');
       await aendere('dauerkosten.json', (d) => ({ ...d, posten: S.dauer.filter((x) => x.name) }), 'Dauerkosten geändert');
     }
     if (was === 'licht') await aendere('einstellungen.json', (d) => ({ ...d, licht: S.licht }), 'Licht-Modi geändert');
@@ -559,6 +578,7 @@ document.addEventListener('pointerdown', (e) => {
       const [x] = S[k].splice(i, 1);
       S[k].splice(j, 0, x);
       if (k === 'licht') lichtOffen.clear();
+      if (k === 'kats') katOffen.clear();
     }
     zeichne();
     sichernZeigen();

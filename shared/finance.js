@@ -4,7 +4,8 @@ export const KAT_SYMBOLE = {
   Lebensmittel: 'korb', Essen: 'besteck', Supplements: 'pille', Kleidung: 'shirt', Haushalt: 'haus',
   Freizeit: 'stern', 'Mobilität': 'bus', Digital: 'handy', Sonstiges: 'punkte',
 };
-export const katSymbol = (n) => KAT_SYMBOLE[n] || 'punkte';
+export const katSymbol = (n, symbol) => symbol || KAT_SYMBOLE[n] || 'punkte';
+export const KAT_ICONS = ['korb', 'besteck', 'tasse', 'pille', 'shirt', 'haus', 'sofa', 'bus', 'handy', 'film', 'musik', 'buch', 'stern', 'herz', 'pflanze', 'topf', 'bett', 'geldbeutel', 'wagen', 'kappe', 'bild', 'stift', 'kalender', 'punkte'];
 
 export const aktive = (kosten) => (kosten?.buchungen || []).filter((b) => !b.storniert);
 export const monatKey = (d) => isoDate(d).slice(0, 7);
