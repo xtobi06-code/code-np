@@ -468,6 +468,12 @@ function oeffne(id) {
   $(id).classList.add('an');
   $('schleier').classList.add('an');
 }
+// Solange ein Blatt offen ist, scrollt nichts dahinter mit
+document.addEventListener('touchmove', (e) => {
+  if (!offenesBlatt) return;
+  const b = $(offenesBlatt);
+  if (!(b.contains(e.target) && b.scrollHeight > b.clientHeight + 1)) e.preventDefault();
+}, { passive: false });
 function schliesse() {
   if (!offenesBlatt) return;
   $(offenesBlatt).classList.remove('an');
