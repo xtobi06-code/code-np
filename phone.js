@@ -1,11 +1,11 @@
 import { F, ladeAlle, aendere, aendereOp, nachholen, beiOffline, offenNachzureichen, routine, beiFehler, FehlerToken } from './shared/core.js';
-import { kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
+import { erzeugen, badgeHtml, kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
 import { erstelleSzene } from './shared/scene.js';
 import { panelEinst, szenenDatum } from './shared/core.js';
 import { icon, wetterSymbol } from './shared/icons.js';
-import { headerText, esc, euro, euro0, uid, isoZeit, isoDate, fmtDM, fmtWtDM, parseBetrag, MON, addDays, dunkler } from './shared/util.js';
+import { headerText, esc, euro, euro0, uid, isoZeit, isoDate, fmtDM, fmtWtDM, parseBetrag, MON, addDays, dunkler, montag, kwKey, isoWeek } from './shared/util.js';
 
 const $ = (id) => document.getElementById(id);
 const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'einkauf.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
@@ -124,8 +124,25 @@ function gruppe(titel, liste) {
   if (!liste.length) return '';
   return `<div class="gruppe-titel"><span>${titel}</span><span class="zahl">${liste.length}</span></div><div class="gruppe">${liste.map((a) => taskHtml(a)).join('')}</div>`;
 }
+function wochenKarte() {
+  const jetzt = new Date();
+  const k = kwKey(jetzt);
+  const mo = isoDate(montag(jetzt));
+  const so = isoDate(addDays(montag(jetzt), 6));
+  const alle = F['aufgaben.json']?.aufgaben || [];
+  // Ganze Woche: vorhandene Aufgaben plus die, die in den nächsten Tagen noch entstehen
+  const kommend = erzeugen(F['einstellungen.json'], F['regeln.json']?.regeln || [], alle, addDays(montag(jetzt), 6)).map((a) => ({ ...a, status: 'offen' }));
+  const auf = [...alle, ...kommend].filter((a) => a.liste === 'studium' && a.regel && a.status !== 'geloescht' && (a.kw ? a.kw === k : a.datum >= mo && a.datum <= so));
+  if (!auf.length) return '';
+  const fertig = auf.filter((a) => a.status === 'erledigt').length;
+  const nach = {};
+  auf.forEach((a) => { const m = nach[a.modul] || (nach[a.modul] = { g: 0, f: 0 }); m.g++; if (a.status === 'erledigt') m.f++; });
+  const zeilen = Object.entries(nach).map(([m, v]) => `<div class="zeile wk"><span class="wk-m">${badgeHtml(m)}</span><span class="wk-bar"><i style="width:${(v.f / v.g) * 100}%;background:${modulFarbe(m)}"></i></span><span class="neben">${v.f}/${v.g}</span></div>`).join('');
+  return `<div class="gruppe-titel"><span>Diese Woche · KW ${isoWeek(jetzt)}</span><span class="zahl">${fertig} von ${auf.length} erledigt</span></div><div class="gruppe">${zeilen}</div>`;
+}
 function renderTodos() {
   offeneZeile = null;
+  $('woche-karte').innerHTML = S.todoListe === 'studium' ? wochenKarte() : '';
   const alle = F['aufgaben.json']?.aufgaben || [];
   const liste = S.todoListe;
   const auf = offene(alle, liste);
