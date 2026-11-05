@@ -99,6 +99,7 @@ export const kwVon = (a) => a.kw || (a.typ === 'Videos' && a.datum ? kwKey(parse
 export function istHeute(a, jetzt = new Date()) {
   const h = isoDate(jetzt);
   if (a.faellig) return a.faellig === h;
+  if (a.typ === 'Videos') return false; // Videos erscheinen vorab, sind aber nicht für heute fällig
   return a.ab === h || a.datum === h || (!a.regel && (a.erstellt || '').startsWith(h));
 }
 export function ueberfaellig(a, jetzt = new Date()) {
