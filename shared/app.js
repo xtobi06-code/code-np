@@ -42,7 +42,9 @@ export function toast(text, aktion, dauer = 5000) {
     document.body.appendChild(el);
   }
   el.innerHTML = `<span>${esc(text)}</span>${aktion ? `<button type="button">${esc(aktion.label)}</button>` : ''}`;
-  if (aktion) el.querySelector('button').onclick = () => { el.classList.remove('an'); aktion.fn(); };
+  const gezeigt = Date.now();
+  // Taps direkt nach dem Einblenden (z. B. Nach-Tipper) lösen "Rückgängig" nicht aus
+  if (aktion) el.querySelector('button').onclick = () => { if (Date.now() - gezeigt < 900) return; el.classList.remove('an'); aktion.fn(); };
   el.classList.add('an');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('an'), dauer);

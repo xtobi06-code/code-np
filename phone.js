@@ -595,6 +595,7 @@ for (const liste of [$('todo-liste'), $('fin-letzte')]) {
   let d = null;
   liste.addEventListener('pointerdown', (e) => {
     const vorn = e.target.closest('.vorn');
+    if (e.target.closest('.loesch')) return; // Antippen von Löschen darf die Zeile nicht erst schließen
     if (!vorn) { schliesseZeile(); return; }
     const zeile = vorn.parentElement;
     if (offeneZeile && offeneZeile !== zeile) schliesseZeile();

@@ -88,7 +88,12 @@ export function erzeugen(e, regeln, vorhanden, jetzt = new Date()) {
 }
 
 const ohneTermin = (a) => !(a.faellig || a.datum || a.ab || kwVon(a));
-const sk = (a) => a.faellig || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
+// Wochenaufgaben (KW) werden beim Sortieren wie ein Freitag dieser Woche gerechnet.
+function freitagVon(kw) {
+  const [y, w] = kw.split('-W').map(Number);
+  return isoDate(addDays(montag(new Date(y, 0, 4)), (w - 1) * 7 + 4));
+}
+const sk = (a) => a.faellig || (kwVon(a) ? freitagVon(kwVon(a)) : '') || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
 // Kalenderwoche einer Aufgabe: bei Wochenaufgaben und Videos (nach Datum der Vorlesung).
 export const kwVon = (a) => a.kw || (a.typ === 'Videos' && a.datum ? kwKey(parseDate(a.datum)) : null);
 export function istHeute(a, jetzt = new Date()) {
