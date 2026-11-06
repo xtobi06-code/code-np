@@ -190,6 +190,7 @@ function panelHtml() {
   return `<div class="gruppe-titel">Panel</div>
   <div class="gruppe">
     <div class="zeile"><span class="lbl">Dein Name (Begrüßung)</span><input data-p="e.name" value="${esc(S.e.name || '')}" placeholder="Tobias"></div>
+    <div class="zeile"><span class="lbl">Wetter-Ort</span><select data-p="e.ort">${[['garching', 'Garching'], ['prackenbach', 'Prackenbach'], ['auto', 'Automatisch (Standort des Geräts)']].map(([v, n]) => `<option value="${v}" ${(S.e.ort || 'garching') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="zeile"><span class="lbl">Nachtuhr ab</span><input type="time" data-p="panel.nachtVon" value="${esc(p.nachtVon)}"></div>
     <div class="zeile"><span class="lbl">Nachtuhr bis</span><input type="time" data-p="panel.nachtBis" value="${esc(p.nachtBis)}"></div>
     <div class="zeile"><span class="lbl">Bewegter Hintergrund</span>${schalter('panel.bewegung', p.bewegung !== false)}</div>
@@ -398,7 +399,7 @@ async function sichern(was) {
       await aendere('dauerkosten.json', (d) => ({ ...d, posten: S.dauer.filter((x) => x.name) }), 'Dauerkosten geändert');
     }
     if (was === 'licht') await aendere('einstellungen.json', (d) => ({ ...d, licht: S.licht }), 'Licht-Modi geändert');
-    if (was === 'panel') await aendere('einstellungen.json', (d) => ({ ...d, name: S.e.name || '', panel: { ...S.panel, fotoMinuten: Number(S.panel.fotoMinuten) || 15 } }), 'Panel geändert');
+    if (was === 'panel') await aendere('einstellungen.json', (d) => ({ ...d, name: S.e.name || '', ort: S.e.ort || 'garching', panel: { ...S.panel, fotoMinuten: Number(S.panel.fotoMinuten) || 15 } }), 'Panel geändert');
     if (was === 'module') {
       const module = {};
       S.module.filter((m) => m.k.trim()).forEach((m) => { module[m.k.trim().toUpperCase()] = { name: m.name, farbe: m.farbe }; });
@@ -432,7 +433,7 @@ async function sichern(was) {
 const teile = () => ({
   finanzen: JSON.stringify([S.e.monatsbudget, S.kats, S.dauer]),
   licht: JSON.stringify(S.licht),
-  panel: JSON.stringify([S.e.name, S.panel]),
+  panel: JSON.stringify([S.e.name, S.e.ort, S.panel]),
   module: JSON.stringify(S.module),
   semester: JSON.stringify([S.e.semester, S.pausen]),
   regeln: JSON.stringify(S.regeln),

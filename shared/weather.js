@@ -1,5 +1,19 @@
-const LAT = 48.25;
-const LON = 11.65;
+export const ORTE = { garching: [48.25, 11.65], prackenbach: [49.05, 12.92] };
+
+// "auto": Standort des Geräts; bei Fehler der zuletzt bekannte oder Garching
+function standort(ort) {
+  if (ort !== 'auto') return Promise.resolve(ORTE[ort] || ORTE.garching);
+  let alt = null;
+  try { alt = JSON.parse(localStorage.getItem('np-ort')); } catch { /* egal */ }
+  return new Promise((ok) => {
+    if (!navigator.geolocation) return ok(alt || ORTE.garching);
+    navigator.geolocation.getCurrentPosition((p) => {
+      const c = [Math.round(p.coords.latitude * 100) / 100, Math.round(p.coords.longitude * 100) / 100];
+      try { localStorage.setItem('np-ort', JSON.stringify(c)); } catch { /* egal */ }
+      ok(c);
+    }, () => ok(alt || ORTE.garching), { timeout: 6000, maximumAge: 30 * 60 * 1000 });
+  });
+}
 
 // Schwellen auf die gefühlte Temperatur (°C), bewusst früh: Jacke an, bevor es zu kalt wird.
 export const KLEIDUNG_STANDARD = [
@@ -74,7 +88,8 @@ export function auswerten(daten, jetzt = new Date(), stufen, regenSchwelle) {
   };
 }
 
-export async function ladeWetter(stufen, regenSchwelle) {
+export async function ladeWetter(stufen, regenSchwelle, ort = 'garching') {
+  const [LAT, LON] = await standort(ort);
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}`
     + '&current=temperature_2m,weather_code,is_day'
     + '&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code'

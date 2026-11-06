@@ -4,7 +4,7 @@ import { esc } from './util.js';
 
 export async function holeWetter(einst) {
   const k = einst?.kleidung;
-  return ladeWetter(k?.stufen || KLEIDUNG_STANDARD, k?.regenSchwelle ?? REGEN_SCHWELLE);
+  return ladeWetter(k?.stufen || KLEIDUNG_STANDARD, k?.regenSchwelle ?? REGEN_SCHWELLE, einst?.ort || 'garching');
 }
 
 export function wetterHtml(w, size = 22) {
