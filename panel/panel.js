@@ -237,7 +237,7 @@ async function ladeWetter() {
   stapelRendern();
   ruheInfo();
 }
-function szenenTakt() { szene.aktualisiere(szenenDatum(), wetter ? wetter.code : 0); }
+function szenenTakt() { szene.aktualisiere(szenenDatum(), wetter && panelEinst().wetterSzene !== false ? wetter.code : 0); }
 
 /* ---------- Smart Stack ---------- */
 function termineKarte() {

@@ -656,7 +656,7 @@ szene.bewegung(false);
 function szeneTakt() {
   const st = panelEinst().hintergrund;
   szene.setzeStil(st === 'fotos' ? 'landschaft' : st);
-  szene.aktualisiere(szenenDatum(), wetterCode);
+  szene.aktualisiere(szenenDatum(), panelEinst().wetterSzene === false ? 0 : wetterCode);
 }
 szeneTakt();
 starteZyklus(szeneTakt, 120);

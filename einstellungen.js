@@ -195,6 +195,7 @@ function panelHtml() {
     <div class="zeile"><span class="lbl">Nachtuhr bis</span><input type="time" data-p="panel.nachtBis" value="${esc(p.nachtBis)}"></div>
     <div class="zeile"><span class="lbl">Bewegter Hintergrund</span>${schalter('panel.bewegung', p.bewegung !== false)}</div>
     <div class="zeile"><span class="lbl">Karten wechseln automatisch</span>${schalter('panel.stapelAuto', p.stapelAuto === true)}</div>
+    <div class="zeile"><span class="lbl">Hintergrund folgt dem Wetter</span>${schalter('panel.wetterSzene', p.wetterSzene !== false)}</div>
     <div class="zeile"><span class="lbl">Glas-Effekt</span>${schalter('panel.glas', p.glas !== false)}</div>
     <div class="zeile"><span class="lbl">Tageszeit des Hintergrunds</span><select data-p="panel.szeneZeit">${[['', 'Automatisch'], ['08:00', 'Morgen'], ['12:00', 'Mittag'], ['16:20', 'Abenddämmerung'], ['22:00', 'Nacht']].map(([v, n]) => `<option value="${v}" ${(p.szeneZeit || '') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="zeile"><span class="lbl">Hintergrund</span><select data-p="panel.hintergrund" data-neu-zeichnen>${[['landschaft','Bayerischer Wald'],['gebirge','Hochgebirge'],['duenen','Hügel'],['aurora','Himmel (ruhig)'],['abendrot','Abendrot'],['ozean','Ozean'],['minze','Minze'],['violett','Violett'],['graphit','Graphit'],['fotos','Eigene Fotos']].map(([v, n]) => `<option value="${v}" ${(p.hintergrund || 'landschaft') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
