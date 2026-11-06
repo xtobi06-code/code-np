@@ -190,7 +190,7 @@ function panelHtml() {
   return `<div class="gruppe-titel">Panel</div>
   <div class="gruppe">
     <div class="zeile"><span class="lbl">Dein Name (Begrüßung)</span><input data-p="e.name" value="${esc(S.e.name || '')}" placeholder="Tobias"></div>
-    <div class="zeile"><span class="lbl">Wetter-Ort</span><select data-p="e.ort">${[['garching', 'Garching'], ['prackenbach', 'Prackenbach'], ['auto', 'Automatisch (Standort des Geräts)']].map(([v, n]) => `<option value="${v}" ${(S.e.ort || 'garching') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="zeile"><span class="lbl">Wetter-Ort</span><select data-p="e.ort">${[['garching', 'Garching'], ['prackenbach', 'Prackenbach'], ['auto', 'Automatisch']].map(([v, n]) => `<option value="${v}" ${(S.e.ort || 'garching') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="zeile"><span class="lbl">Nachtuhr ab</span><input type="time" data-p="panel.nachtVon" value="${esc(p.nachtVon)}"></div>
     <div class="zeile"><span class="lbl">Nachtuhr bis</span><input type="time" data-p="panel.nachtBis" value="${esc(p.nachtBis)}"></div>
     <div class="zeile"><span class="lbl">Bewegter Hintergrund</span>${schalter('panel.bewegung', p.bewegung !== false)}</div>

@@ -88,6 +88,18 @@ export function auswerten(daten, jetzt = new Date(), stufen, regenSchwelle) {
   };
 }
 
+// Bright Sky (DWD): gemessene Werte der nächsten Wetterstation; Open-Meteo liefert nur Modellwerte
+const BS_CODE = { 'clear-day': 0, 'clear-night': 0, 'partly-cloudy-day': 2, 'partly-cloudy-night': 2, cloudy: 3, wind: 3, fog: 45, rain: 61, sleet: 67, snow: 71, hail: 80, thunderstorm: 95 };
+async function messwerte(lat, lon) {
+  try {
+    const r = await fetch(`https://api.brightsky.dev/current_weather?lat=${lat}&lon=${lon}&tz=Europe/Berlin`);
+    if (!r.ok) return null;
+    const w = (await r.json()).weather;
+    if (!w) return null;
+    return { temp: typeof w.temperature === 'number' ? w.temperature : null, code: w.icon in BS_CODE ? BS_CODE[w.icon] : null, tag: /-day$/.test(w.icon || '') ? 1 : /-night$/.test(w.icon || '') ? 0 : null };
+  } catch { return null; }
+}
+
 export async function ladeWetter(stufen, regenSchwelle, ort = 'garching') {
   const [LAT, LON] = await standort(ort);
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}`
@@ -95,7 +107,13 @@ export async function ladeWetter(stufen, regenSchwelle, ort = 'garching') {
     + '&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code'
     + '&daily=temperature_2m_max,temperature_2m_min,weather_code'
     + '&forecast_days=2&timezone=Europe%2FBerlin';
-  const r = await fetch(url);
+  const [r, m] = await Promise.all([fetch(url), messwerte(LAT, LON)]);
   if (!r.ok) throw new Error(`Wetter: Status ${r.status}`);
-  return auswerten(await r.json(), new Date(), stufen, regenSchwelle);
+  const daten = await r.json();
+  if (m) {
+    if (m.temp != null) daten.current.temperature_2m = m.temp;
+    if (m.code != null) daten.current.weather_code = m.code;
+    if (m.tag != null) daten.current.is_day = m.tag;
+  }
+  return auswerten(daten, new Date(), stufen, regenSchwelle);
 }
