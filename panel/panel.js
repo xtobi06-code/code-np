@@ -1,10 +1,11 @@
-import { F, ladeAlle, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi, szenenDatum } from '../shared/core.js';
+import { F, ladeAlle, ausCache, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi, szenenDatum } from '../shared/core.js';
 import { module as modulListe, kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
 import { icon, wetterSymbol } from '../shared/icons.js';
 import { erstelleSzene } from '../shared/scene.js';
 import { ordner, rohdatei } from '../shared/github.js';
+import { rausfahren, merkeNeu, zeigeNeue, weich, wischLoeschen, reduziert } from '../shared/bewegung.js';
 import { uid, isoZeit, WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, euro0, hexRgba, kwKey, montag, addDays, fmtDM } from '../shared/util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -14,8 +15,6 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
 };
 
-let offeneZeile = null;
-let wischZeit = 0;
 const szene = erstelleSzene($('szene'));
 let wetter = null;
 let seite = 1;
@@ -24,6 +23,8 @@ let wachBis = 0;
 let nacht = false;
 let tagGeladen = '';
 let fotoListe = '';
+// Wischen zum Löschen in den Aufgabenlisten (kurz: Knopf, ganz durch: sofort)
+const W = wischLoeschen({ zeile: '.liste .task', breite: () => 5.4 * parseFloat(getComputedStyle(document.documentElement).fontSize) || 96 });
 
 beiFehler((e) => toast(e instanceof FehlerToken ? e.message : 'Speichern fehlgeschlagen'));
 beiOffline(() => toast('Offline gespeichert, wird nachgereicht'));
@@ -40,6 +41,7 @@ document.querySelectorAll('.plus-k').forEach((b) => { b.innerHTML = icon('plus',
 
 /* ---------- Seiten und Gesten ---------- */
 function zeige(i, sofort = false) {
+  const vorher = seite;
   seite = Math.max(0, Math.min(2, i));
   const s = $('seiten');
   if (sofort) { s.style.transition = 'none'; requestAnimationFrame(() => { s.style.transition = ''; }); }
@@ -52,24 +54,66 @@ function zeige(i, sofort = false) {
     document.body.classList.toggle('nacht-wach', wach);
     document.body.classList.toggle('nachtmodus', !wach);
     wachBis = wach ? Date.now() + 90000 : 0;
+    if (wach && vorher === 0 && seite === 1) aufwachen();
   }
+}
+// Übersicht erscheint nach der Nacht gestaffelt, Spalte für Spalte (passiert selten, darf daher etwas zeigen)
+function aufwachen() {
+  if (reduziert()) return;
+  const els = [...document.querySelectorAll('.uebersicht .sperr, .uebersicht .widget')]
+    .map((el) => [el, el.getBoundingClientRect()])
+    .sort((a, b) => a[1].left - b[1].left || a[1].top - b[1].top);
+  els.forEach(([el], n) => el.animate([
+    { opacity: 0, transform: 'translateY(.9rem) scale(.98)' },
+    { opacity: 1, transform: 'none' },
+  ], { duration: 520, delay: 120 + n * 55, easing: 'cubic-bezier(.23, 1, .32, 1)', fill: 'backwards' }));
 }
 let start = null;
 let gewischt = 0;
-$('app').addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY, task: !!e.target.closest('.task') }; });
-// Sobald die Geste klar waagerecht ist, wird sofort umgeschaltet (nicht erst beim Loslassen)
+// Seiten folgen dem Finger und rasten mit Schwung ein. Auf einer Aufgabe gehört Wischen nach links dem Löschen.
+const seitenEl = $('seiten');
+$('app').addEventListener('pointerdown', (e) => {
+  const z = e.target.closest('.task');
+  start = { x: e.clientX, y: e.clientY, id: e.pointerId, task: !!z, offen: !!z && W.offen() === z, aktiv: false, d: 0, spur: [] };
+});
 $('app').addEventListener('pointermove', (e) => {
-  if (!start) return;
+  if (!start || e.pointerId !== start.id) return;
   const dx = e.clientX - start.x;
   const dy = e.clientY - start.y;
-  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4 && !(start.task && dx < 0)) {
-    start = null;
-    gewischt = Date.now();
-    zeige(seite + (dx < 0 ? 1 : -1));
+  if (!start.aktiv) {
+    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { start = null; return; }
+    if (Math.abs(dx) < 12 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    if (start.task && (dx < 0 || start.offen)) { start = null; return; }
+    start.aktiv = true;
+    start.x = e.clientX;
+    seitenEl.style.transition = 'none';
+    try { $('app').setPointerCapture(e.pointerId); } catch { /* egal */ }
   }
+  let d = e.clientX - start.x;
+  if ((seite === 0 && d > 0) || (seite === 2 && d < 0)) d *= 0.3; // Gummiband am Rand
+  start.d = d;
+  seitenEl.style.transform = `translate3d(calc(${-seite * 33.3333}% + ${d}px), 0, 0)`;
+  start.spur.push([e.timeStamp, e.clientX]);
+  if (start.spur.length > 6) start.spur.shift();
 });
-$('app').addEventListener('pointerup', () => { start = null; });
-$('app').addEventListener('pointercancel', () => { start = null; });
+const seiteEnde = (e) => {
+  if (!start || (e && e.pointerId !== start.id)) return;
+  const x = start;
+  start = null;
+  if (!x.aktiv) return;
+  gewischt = Date.now();
+  seitenEl.style.transition = '';
+  const [a, b] = [x.spur[0], x.spur[x.spur.length - 1]];
+  const v = a && b && b[0] > a[0] ? (b[1] - a[1]) / (b[0] - a[0]) : 0;
+  const grenze = innerWidth * 0.22;
+  let ziel = seite;
+  if (x.d < -grenze || (v < -0.35 && x.d < -20)) ziel = seite + 1;
+  else if (x.d > grenze || (v > 0.35 && x.d > 20)) ziel = seite - 1;
+  letzteBeruehrung = Date.now();
+  zeige(ziel);
+};
+$('app').addEventListener('pointerup', seiteEnde);
+$('app').addEventListener('pointercancel', seiteEnde);
 document.addEventListener('click', (e) => {
   if (Date.now() - gewischt < 350) { e.preventDefault(); e.stopPropagation(); }
 }, true);
@@ -107,6 +151,7 @@ function takt() {
     szene.bewegung(!n && p.bewegung);
     document.body.classList.toggle('nachtzeit', n);
     zeige(n ? 0 : 1);
+    if (!n) aufwachen();
   }
   if (nacht && wachBis && Date.now() > wachBis) {
     wachBis = 0;
@@ -151,7 +196,6 @@ function kuerzlichErledigt(name) {
     .sort((x, y) => y.erledigt.localeCompare(x.erledigt));
 }
 function liste(name) {
-  offeneZeile = null;
   const box = $(name);
   const auf = offene(F['aufgaben.json']?.aufgaben || [], name);
   const erl = kuerzlichErledigt(name);
@@ -160,34 +204,42 @@ function liste(name) {
   const alt = box.scrollTop;
   box.innerHTML = auf.map(zeileHtml).join('') + erl.map((a) => zeileHtml(a).replace('class="task', 'class="task erledigt')).join('');
   box.scrollTop = alt;
+  zeigeNeue(box);
 }
+const setzeAufgabe = (id, felder, msg) => aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder }, msg).catch(() => {});
 $('app').addEventListener('click', (e) => {
   const row = e.target.closest('.task');
   if (!row || row.classList.contains('fertig')) return;
   const id = row.dataset.id;
   if (e.target.closest('[data-loesch]')) {
-    aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'geloescht' } }, 'Gelöscht').catch(() => {});
-    offeneZeile = null;
-    listen();
-    toast('Aufgabe gelöscht', { label: 'Rückgängig', fn: () => { aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'offen' } }, 'Wiederhergestellt').catch(() => {}); listen(); } }, 6000);
+    const weg = () => {
+      setzeAufgabe(id, { status: 'geloescht' }, 'Gelöscht');
+      listen();
+      toast('Aufgabe gelöscht', { label: 'Rückgängig', fn: () => { setzeAufgabe(id, { status: 'offen' }, 'Wiederhergestellt'); merkeNeu(id); listen(); } }, 6000);
+    };
+    if (row.classList.contains('weg')) { weg(); return; }
+    row.classList.add('weg');
+    rausfahren(row).then(weg);
     return;
   }
-  if (Date.now() - wischZeit < 350) return;
-  if (offeneZeile) { schliesseZeile(); return; }
+  if (W.eben()) return;
+  if (W.offen()) { W.zu(); return; }
+  if (row.classList.contains('weg')) return;
+  row.classList.add('weg');
   if (row.classList.contains('erledigt')) {
-    aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: 'offen', erledigt: null } }, 'Rückgängig').catch(() => {});
-    listen();
+    rausfahren(row).then(() => { setzeAufgabe(id, { status: 'offen', erledigt: null }, 'Rückgängig'); merkeNeu(id); listen(); });
     return;
   }
+  // Haken füllt sich, Zeile schrumpft weg und taucht unten bei den Erledigten wieder auf
   row.classList.add('fertig');
   const zeit = new Date().toISOString();
-  setTimeout(() => {
-    const setze = (offen) => aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: offen ? 'offen' : 'erledigt', erledigt: offen ? null : zeit } }, offen ? 'Rückgängig' : 'Abgehakt').catch(() => {});
-    setze(false);
+  setTimeout(() => rausfahren(row, 280).then(() => {
+    setzeAufgabe(id, { status: 'erledigt', erledigt: zeit }, 'Abgehakt');
+    merkeNeu(id);
     listen();
     const a = F['aufgaben.json'].aufgaben.find((x) => x.id === id);
-    toast(`${a ? a.titel : 'Aufgabe'} erledigt`, { label: 'Rückgängig', fn: () => { setze(true); listen(); } }, 6000);
-  }, 420);
+    toast(`${a ? a.titel : 'Aufgabe'} erledigt`, { label: 'Rückgängig', fn: () => { setzeAufgabe(id, { status: 'offen', erledigt: null }, 'Rückgängig'); merkeNeu(id); listen(); } }, 6000);
+  }), 300);
 });
 function listen() { liste('studium'); liste('leben'); }
 
@@ -299,14 +351,14 @@ function budgetKarte() {
   const R = 30;
   const U = 2 * Math.PI * R;
   const ring = `<svg class="ring" viewBox="0 0 76 76" width="76" height="76" style="width:4.75rem;height:4.75rem"><circle cx="38" cy="38" r="${R}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="8"/>
-    <circle cx="38" cy="38" r="${R}" fill="none" stroke="${farbe}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(anteil * U).toFixed(1)} ${U.toFixed(1)}" transform="rotate(-90 38 38)"/>
+    <circle cx="38" cy="38" r="${R}" fill="none" stroke="${farbe}" stroke-width="8" stroke-linecap="round" data-d="p-ring" stroke-dasharray="${(anteil * U).toFixed(1)} ${U.toFixed(1)}" transform="rotate(-90 38 38)"/>
     <text x="38" y="43" text-anchor="middle">${Math.round(anteil * 100)}%</text></svg>`;
   const top = u.kats.filter((k) => k.wert > 0).sort((a, b) => b.wert - a.wert).slice(0, 3).map((k) =>
-    `<div class="b-zeile" style="--c:${k.farbe}"><span class="name">${esc(k.name)}</span><span class="bar"><i style="width:${Math.min(100, k.budget ? (k.wert / k.budget) * 100 : 100)}%"></i></span><span class="n">${euro0(k.wert)}</span></div>`).join('');
+    `<div class="b-zeile" style="--c:${k.farbe}"><span class="name">${esc(k.name)}</span><span class="bar"><i data-w="p-b-${esc(k.name)}" style="width:${Math.min(100, k.budget ? (k.wert / k.budget) * 100 : 100)}%"></i></span><span class="n">${euro0(k.wert)}</span></div>`).join('');
   const letzter = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const tage = letzter - new Date().getDate() + 1;
   return `<div class="k-label" style="--lc:#30d158">${icon('geldbeutel', 16, 2.2)}Budget</div>
-    <div class="b-reihe"><div><div class="b-klein" style="margin:0">${u.rest >= 0 ? 'Heute verfügbar' : 'Über Budget'}</div><div class="b-gross" style="${u.rest < 0 ? 'color:#ff6b61' : ''}">${euro(u.rest >= 0 ? u.restTag : -u.rest)}</div>
+    <div class="b-reihe"><div><div class="b-klein" style="margin:0">${u.rest >= 0 ? 'Heute verfügbar' : 'Über Budget'}</div><div class="b-gross" style="${u.rest < 0 ? 'color:#ff6b61' : ''}" data-n="p-tag" data-v="${u.rest >= 0 ? u.restTag : -u.rest}" data-f="euro">${euro(u.rest >= 0 ? u.restTag : -u.rest)}</div>
     <div class="b-klein">${euro0(Math.max(0, u.rest))} übrig · noch ${tage} ${tage === 1 ? 'Tag' : 'Tage'}</div></div>${ring}</div>
     <div class="b-fuss">${top}</div>`;
 }
@@ -324,9 +376,9 @@ function wocheKarte() {
   const nachModul = {};
   auf.forEach((a) => { const m = nachModul[a.modul] || (nachModul[a.modul] = { g: 0, f: 0 }); m.g++; if (a.status === 'erledigt') m.f++; });
   const zeilen = Object.entries(nachModul).slice(0, 6).map(([m, v]) =>
-    `<div class="b-zeile" style="--c:${modulFarbe(m)}"><span class="name" style="width:3.2rem">${badgeHtml(m)}</span><span class="bar"><i style="width:${(v.f / v.g) * 100}%"></i></span><span class="n" style="width:2.6rem">${v.f}/${v.g}</span></div>`).join('');
+    `<div class="b-zeile" style="--c:${modulFarbe(m)}"><span class="name" style="width:3.2rem">${badgeHtml(m)}</span><span class="bar"><i data-w="p-w-${esc(m)}" style="width:${(v.f / v.g) * 100}%"></i></span><span class="n" style="width:2.6rem">${v.f}/${v.g}</span></div>`).join('');
   return `<div class="k-label" style="--lc:#d98cff">${icon('kappe', 16, 2.2)}Woche · KW ${isoWeek(jetzt)}</div>
-    <div class="k-gross">${fertig} von ${auf.length} erledigt</div><div class="b-fuss" style="margin-top:auto">${zeilen}</div>`;
+    <div class="k-gross"><span data-n="p-wf" data-v="${fertig}">${fertig}</span> von ${auf.length} erledigt</div><div class="b-fuss" style="margin-top:auto">${zeilen}</div>`;
 }
 let stapelIndex = 0;
 let stapelPause = 0;
@@ -340,6 +392,7 @@ function stapelRendern() {
   if (ids.join() !== stapelIds.join()) stapelIndex = ids.length !== stapelIds.length ? 0 : Math.max(0, ids.indexOf(aktuell));
   stapelIds = ids;
   $('stapel-karten').innerHTML = ids.map((id, i) => `<div class="karte${i === stapelIndex ? ' an' : ''}">${karten[id]}</div>`).join('');
+  weich($('stapel-karten'));
   $('stapel-punkte').innerHTML = ids.length > 1 ? ids.map((_, i) => `<i class="${i === stapelIndex ? 'an' : ''}"></i>`).join('') : '';
 }
 function stapelWeiter() {
@@ -421,6 +474,7 @@ async function laden(dateien = DATEIEN) {
 }
 
 zeige(1, true);
+if (ausCache(DATEIEN)) alles();
 takt();
 szenenTakt();
 setInterval(takt, 1000);
@@ -518,6 +572,7 @@ function aufgabeSpeichern() {
   if (a.liste === 'studium' && a.modul) neu.modul = a.modul;
   if (a.faellig) neu.faellig = isoDate(addDays(new Date(), a.faellig === 'morgen' ? 1 : 0));
   aendereOp('aufgaben.json', { liste: 'aufgaben', neu }, 'Neue Aufgabe').catch(() => {});
+  merkeNeu(neu.id);
   dialogZu();
   listen();
   toast('Aufgabe hinzugefügt');
@@ -582,7 +637,7 @@ dlg.addEventListener('input', (e) => {
 dlg.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !dlgArt) return;
   e.preventDefault();
-  if (dlgArt.typ === 'aufgabe' && e.target.id === 'd-titel') aufgabeSpeichern();
+  if (dlgArt.typ === 'aufgabe' && e.target.id === 'd-titel') { aufgabeSpeichern(); return; }
   if (dlgArt.typ === 'einkauf' && e.target.id === 'd-einkauf') {
     const teile = e.target.value.split(',').map((t) => t.trim()).filter(Boolean);
     if (!teile.length) return;
@@ -599,49 +654,3 @@ addEventListener('pageshow', (e) => { if (e.persisted) auffrischen(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') auffrischen(); });
 
 
-/* ---------- Wischen zum Löschen ---------- */
-const BREITE = 5.4 * parseFloat(getComputedStyle(document.documentElement).fontSize) || 96;
-function schliesseZeile() {
-  if (!offeneZeile) return;
-  offeneZeile.classList.remove('auf');
-  offeneZeile.querySelector('.vorn').style.transform = '';
-  offeneZeile.querySelector('.loesch').style.width = '';
-  offeneZeile = null;
-}
-{
-  let d = null;
-  const rein = (e) => e.target.closest && e.target.closest('.liste .task');
-  document.addEventListener('pointerdown', (e) => {
-    const zeile = rein(e);
-    if (!zeile) { if (offeneZeile && !e.target.closest('[data-loesch]')) schliesseZeile(); return; }
-    if (offeneZeile && offeneZeile !== zeile) schliesseZeile();
-    d = { x: e.clientX, y: e.clientY, zeile, vorn: zeile.querySelector('.vorn'), start: offeneZeile === zeile ? -BREITE : 0, aktiv: false, id: e.pointerId, box: zeile.closest('.liste') };
-  });
-  document.addEventListener('pointermove', (e) => {
-    if (!d) return;
-    const dx = e.clientX - d.x;
-    const dy = e.clientY - d.y;
-    if (!d.aktiv) {
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; }
-      if (Math.abs(dx) < 10) return;
-      d.aktiv = true;
-      d.zeile.classList.add('zieht');
-      try { d.zeile.setPointerCapture(d.id); } catch { /* egal */ }
-    }
-    d.t = Math.max(-BREITE - 20, Math.min(0, d.start + dx));
-    d.vorn.style.transform = `translateX(${d.t}px)`;
-    d.zeile.querySelector('.loesch').style.width = `${-d.t}px`;
-  });
-  const ende = () => {
-    if (!d) return;
-    const x = d;
-    d = null;
-    if (!x.aktiv) return;
-    wischZeit = Date.now();
-    x.zeile.classList.remove('zieht');
-    const lo = x.zeile.querySelector('.loesch');
-    if (x.t < -BREITE / 2) { x.vorn.style.transform = `translateX(${-BREITE}px)`; lo.style.width = `${BREITE}px`; x.zeile.classList.add('auf'); offeneZeile = x.zeile; } else { x.vorn.style.transform = ''; lo.style.width = ''; x.zeile.classList.remove('auf'); if (offeneZeile === x.zeile) offeneZeile = null; }
-  };
-  document.addEventListener('pointerup', ende);
-  document.addEventListener('pointercancel', ende);
-}

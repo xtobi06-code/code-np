@@ -1,4 +1,4 @@
-import { lesen, aendern, FehlerToken, config } from './github.js';
+import { lesen, aendern, FehlerToken, config, zwischenstand } from './github.js';
 import { erzeugen, setzeModule } from './tasks.js';
 import { dauerFaellig } from './finance.js';
 
@@ -28,6 +28,20 @@ export async function ladeDatei(p) {
   for (const e of wsLesen()) if (e.p === p) F[p] = anwenden(e.op)(F[p]);
   if (p === 'einstellungen.json') setzeModule(F[p].module);
   return F[p];
+}
+// Sofort den letzten Stand zeigen, bis GitHub antwortet. Gibt zurück, ob überhaupt etwas da war.
+export function ausCache(pfade) {
+  let da = false;
+  for (const p of pfade) {
+    if (F[p]) { da = true; continue; }
+    const c = zwischenstand(p);
+    if (!c || !c.data) continue;
+    F[p] = c.data;
+    for (const e of wsLesen()) if (e.p === p) { try { F[p] = anwenden(e.op)(F[p]); } catch { /* egal */ } }
+    if (p === 'einstellungen.json') setzeModule(F[p].module);
+    da = true;
+  }
+  return da;
 }
 export async function ladeAlle(pfade) {
   await Promise.all(pfade.map(ladeDatei));

@@ -4,6 +4,7 @@ import { icon, LICHT_SYMBOLE } from './shared/icons.js';
 import { katSymbol, KAT_ICONS } from './shared/finance.js';
 import { modulFarbe, MODULE_STANDARD, setzeModule } from './shared/tasks.js';
 import { esc, uid, parseBetrag, euro } from './shared/util.js';
+import { wischLoeschen, rausfahren, haptik } from './shared/bewegung.js';
 
 const $ = (id) => document.getElementById(id);
 const vomPanel = document.referrer.includes('/panel/');
@@ -233,7 +234,7 @@ function anleitungHtml() {
 }
 
 const APP_DATEIEN = ['./', 'index.html', 'einstellungen.html', 'phone.js', 'phone.css', 'einstellungen.js', 'panel/', 'panel/index.html', 'panel/panel.js', 'panel/panel.css',
-  'shared/app.js', 'shared/core.js', 'shared/finance.js', 'shared/github.js', 'shared/icons.js', 'shared/scene.css', 'shared/scene.js', 'shared/style.css', 'shared/tasks.js', 'shared/util.js', 'shared/weather.js'];
+  'shared/app.js', 'shared/bewegung.js', 'shared/core.js', 'shared/finance.js', 'shared/github.js', 'shared/icons.js', 'shared/scene.css', 'shared/scene.js', 'shared/style.css', 'shared/tasks.js', 'shared/util.js', 'shared/weather.js'];
 function appHtml() {
   return `<div class="gruppe-titel">App</div>
   <div class="gruppe"><div class="zeile"><button class="textknopf" style="padding:0" id="app-neu">App neu laden (neueste Version holen)</button></div></div>
@@ -248,7 +249,6 @@ document.addEventListener('click', async (e) => {
 });
 
 function zeichne() {
-  offeneWisch = null;
   $('inhalt').innerHTML = verbindungHtml() + (S ? finanzenHtml() + lichtHtml() + panelHtml() + regelnHtml() + moduleHtml() + semesterHtml() + kleidungHtml() + anleitungHtml() + appHtml() : '');
   if (S && S.panel.hintergrund === 'fotos') fotosZeigen();
 }
@@ -361,7 +361,14 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.fav) { const l = S.licht[Number(t.dataset.fav)]; l.favorit = !l.favorit; return zeichne(); }
   if (t.dataset.lichtAuf) { const i = Number(t.dataset.lichtAuf); lichtOffen.has(i) ? lichtOffen.delete(i) : lichtOffen.add(i); return zeichne(); }
   if (t.dataset.neu) { S[t.dataset.neu].push(NEU[t.dataset.neu]()); if (t.dataset.neu === 'licht') lichtOffen.add(S.licht.length - 1); if (t.dataset.neu === 'kats') katOffen.add(S.kats.length - 1); return zeichne(); }
-  if (t.dataset.weg) { const [k, i] = t.dataset.weg.split('.'); S[k].splice(Number(i), 1); if (k === 'licht') lichtOffen.clear(); if (k === 'kats') katOffen.clear(); return zeichne(); }
+  if (t.dataset.weg) {
+    const fertig = () => { const [k, i] = t.dataset.weg.split('.'); S[k].splice(Number(i), 1); if (k === 'licht') lichtOffen.clear(); if (k === 'kats') katOffen.clear(); zeichne(); sichernZeigen(); };
+    const w = t.closest('.wisch');
+    if (!w || w.classList.contains('weg')) return fertig();
+    w.classList.add('weg');
+    haptik();
+    return rausfahren(w).then(fertig);
+  }
   if (t.dataset.hoch) { const [k, i] = t.dataset.hoch.split('.'); const n = Number(i); if (n > 0) [S[k][n - 1], S[k][n]] = [S[k][n], S[k][n - 1]]; if (k === 'licht' && n > 0) { lichtOffen.delete(n); lichtOffen.add(n - 1); } return zeichne(); }
   if (t.dataset.tag) {
     const [i, tag] = t.dataset.tag.split(':').map(Number);
@@ -484,70 +491,25 @@ $('zurueck').addEventListener('click', (e) => {
   bl.innerHTML = `<div class="frage-box"><button class="frage-zu" data-f="bleib" aria-label="Schließen">${icon('x', 18, 2.4)}</button><b>Änderungen sichern?</b><p>Du hast Änderungen gemacht, die noch nicht gesichert sind.</p>
     <button class="knopf" data-f="sichern">Sichern</button><button class="knopf leicht" data-f="weg">Verwerfen</button></div>`;
   document.body.appendChild(bl);
+  const zu = () => { bl.classList.add('zu'); setTimeout(() => bl.remove(), 160); };
   bl.addEventListener('click', async (ev) => {
     const w = ev.target.closest('[data-f]')?.dataset.f;
-    if (!w) { if (ev.target === bl) bl.remove(); return; }
-    if (w === 'bleib') return bl.remove();
+    if (!w) { if (ev.target === bl) zu(); return; }
+    if (w === 'bleib') return zu();
     if (w === 'weg') return (location.href = ziel);
     ev.target.textContent = 'Speichere …';
-    if (await alleSichern()) location.href = ziel; else { bl.remove(); }
+    if (await alleSichern()) location.href = ziel; else zu();
   });
 });
 
 /* Wischen zum Löschen (wie bei den To-dos) */
-const BR = 96;
-let offeneWisch = null;
-let wischZeit = 0;
-function wischSetze(w, t, anim) {
-  w.querySelector('.vorn').style.transform = t ? `translateX(${t}px)` : '';
-  w.querySelector('.loesch').style.width = `${-t}px`;
-  w.classList.toggle('auf', t < 0);
-}
-function wischZu() {
-  if (!offeneWisch) return;
-  wischSetze(offeneWisch, 0);
-  offeneWisch = null;
-}
-{
-  let d = null;
-  document.addEventListener('pointerdown', (e) => {
-    const vorn = e.target.closest('.wisch > .vorn');
-    if (!vorn || e.target.closest('.griff')) { if (!e.target.closest('.loesch')) wischZu(); return; }
-    const w = vorn.parentElement;
-    if (offeneWisch && offeneWisch !== w) wischZu();
-    d = { x: e.clientX, y: e.clientY, w, start: offeneWisch === w ? -BR : 0, aktiv: false };
-  });
-  document.addEventListener('pointermove', (e) => {
-    if (!d) return;
-    const dx = e.clientX - d.x;
-    const dy = e.clientY - d.y;
-    if (!d.aktiv) {
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; }
-      if (Math.abs(dx) < 8) return;
-      d.aktiv = true;
-      d.w.classList.add('zieht');
-    }
-    d.t = Math.max(-BR - 24, Math.min(0, d.start + dx));
-    wischSetze(d.w, d.t);
-  });
-  const ende = () => {
-    if (!d) return;
-    const x = d;
-    d = null;
-    if (!x.aktiv) return;
-    wischZeit = Date.now();
-    x.w.classList.remove('zieht');
-    if (x.t < -BR / 2) { wischSetze(x.w, -BR); offeneWisch = x.w; } else { wischSetze(x.w, 0); if (offeneWisch === x.w) offeneWisch = null; }
-  };
-  document.addEventListener('pointerup', ende);
-  document.addEventListener('pointercancel', ende);
-  // Klicks direkt nach dem Wischen oder auf eine geöffnete Zeile nicht als Antippen werten
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('.loesch')) return;
-    if (Date.now() - wischZeit < 350) { e.stopImmediatePropagation(); e.preventDefault(); return; }
-    if (offeneWisch && e.target.closest('.wisch')) { e.stopImmediatePropagation(); e.preventDefault(); wischZu(); }
-  }, true);
-}
+const W = wischLoeschen({ zeile: '.wisch', ignorieren: '.griff' });
+// Klicks direkt nach dem Wischen oder auf eine geöffnete Zeile nicht als Antippen werten
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.loesch')) return;
+  if (W.eben()) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+  if (W.offen() && e.target.closest('.wisch')) { e.stopImmediatePropagation(); e.preventDefault(); W.zu(); }
+}, true);
 
 /* Reihenfolge per Ziehen am Griff */
 document.addEventListener('pointerdown', (e) => {

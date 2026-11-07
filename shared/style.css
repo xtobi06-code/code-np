@@ -5,6 +5,11 @@
   --seg: rgba(118, 118, 128, .12); --seg-an: #fff; --schatten: 0 1px 2px rgba(0, 0, 0, .04);
   --glas: rgba(255, 255, 255, .72); --glas-rand: rgba(255, 255, 255, .8); --glas-schatten: 0 8px 30px rgba(0, 0, 0, .12), 0 1px 3px rgba(0, 0, 0, .06);
   --rund: 26px; --tint: #007aff;
+  /* Bewegung: starke Ausklang-Kurve, iOS-Blatt-Kurve und eine Feder ohne Nachschwingen */
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  --feder: linear(0, .039 4%, .127 8%, .237 12%, .349 17%, .456 21%, .552 25%, .635 29%, .706 33%, .765 38%, .813 42%, .852 46%, .884 50%, .909 54%, .929 58%, .945 62%, .957 67%, .967 71%, .975 75%, .98 79%, .985 83%, .988 88%, .991 92%, .993 96%, 1);
 }
 @media all {
   :root {
@@ -16,6 +21,14 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+/* Bedienelemente: kein Markieren bei langem Drücken, kein Doppeltipp-Zoom */
+button, a, label, .chip, .segment, .tabbar, .kreis, .zeile.task, .zeile.artikel, .zeile.kat, .zeile.buchung, .griff {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+/* Druck-Feedback: alles Antippbare gibt kurz nach */
+:where(button, .chip, a.rund):where(:not(:disabled)) { transition-property: transform, background-color, color, opacity, box-shadow; transition-duration: .14s; transition-timing-function: var(--ease-out); }
+:where(button, .chip, a.rund):where(:not(:disabled)):active { transform: scale(.96); }
+.segment button:active, .tabbar button:active { transform: scale(.94); }
 body { background: var(--bg); color: var(--text); font: 17px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -.01em; }
 button, input, select { font: inherit; color: inherit; letter-spacing: inherit; }
 a { color: var(--accent); text-decoration: none; }
@@ -37,12 +50,14 @@ a { color: var(--accent); text-decoration: none; }
 
 .segment { position: relative; display: flex; background: var(--seg); border-radius: 999px; padding: 3px; margin: 0 0 18px; }
 .segment::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n, 2)); border-radius: 999px; background: var(--seg-an);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, .12), 0 1px 2px rgba(0, 0, 0, .06); transform: translateX(calc(100% * var(--i, 0))); transition: transform .35s cubic-bezier(.3, .9, .3, 1.05); }
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .12), 0 1px 2px rgba(0, 0, 0, .06); transform: translateX(calc(100% * var(--i, 0))); transition: transform .45s var(--feder); }
 .segment button { position: relative; flex: 1; border: 0; background: transparent; padding: 7px 4px; border-radius: 999px; font-size: 14px; font-weight: 550; color: var(--t2); transition: color .25s; }
 .segment button.an { color: var(--text); font-weight: 650; }
 
-.kreis { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--cd, var(--t3)); flex: none; display: grid; place-items: center; color: transparent; background: none; padding: 0; transition: background .2s, transform .15s; }
+.kreis { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--cd, var(--t3)); flex: none; display: grid; place-items: center; color: transparent; background: none; padding: 0; transition: background .2s, transform .15s var(--ease-out), color .2s; }
 .kreis:active { transform: scale(.85); }
+.weg .kreis.an { animation: kreis-pop .32s var(--ease-out); }
+@keyframes kreis-pop { 0% { transform: scale(.85); } 55% { transform: scale(1.12); } 100% { transform: none; } }
 .kreis.an { background: var(--cd, var(--accent)); color: #fff; }
 @media all { .kreis { border-color: var(--c, var(--t3)); } .kreis.an { background: var(--c, var(--accent)); color: #000; } }
 
@@ -63,8 +78,13 @@ input.feld::placeholder { color: var(--t3); }
 
 #toast { position: fixed; left: 50%; bottom: 82px; transform: translate(-50%, 20px) scale(.96); opacity: 0; pointer-events: none;
   border-radius: 999px; padding: 8px 8px 8px 18px; display: flex; gap: 12px; align-items: center; font-size: 15px; font-weight: 500;
-  transition: transform .3s cubic-bezier(.3, .9, .3, 1.1), opacity .25s; z-index: 60; max-width: calc(100% - 32px); white-space: nowrap;
+  transition: transform .2s var(--ease-out), opacity .18s; z-index: 60; max-width: calc(100% - 32px); white-space: nowrap;
   background: var(--glas); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); border: .5px solid var(--glas-rand); box-shadow: var(--glas-schatten); }
 #toast span { overflow: hidden; text-overflow: ellipsis; }
-#toast.an { transform: translate(-50%, 0) scale(1); opacity: 1; pointer-events: auto; }
+#toast.an { transform: translate(-50%, 0) scale(1); opacity: 1; pointer-events: auto; transition: transform .38s var(--ease-out), opacity .25s; }
 #toast button { background: var(--accent); border: 0; color: #fff; font-weight: 650; padding: 6px 13px; border-radius: 999px; font-size: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .schleier, .blatt, #toast, .frage, .frage-box { transition-duration: .2s !important; }
+}

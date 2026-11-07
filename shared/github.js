@@ -19,6 +19,7 @@ function dec(b64) {
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
+export const zwischenstand = (path) => cacheGet(path);
 function cacheGet(path) {
   try { return JSON.parse(localStorage.getItem('np-cache:' + path)); } catch { return null; }
 }

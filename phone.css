@@ -1,10 +1,10 @@
-main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 32px) 16px 140px; min-height: calc(100vh + 2px); max-width: 640px; margin: 0 auto; }
+main { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 32px) 16px 140px; min-height: calc(100vh + 2px); min-height: calc(100dvh + 2px); max-width: 640px; margin: 0 auto; }
 .tint { position: fixed; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none; transition: background .6s;
   background: radial-gradient(120% 100% at 15% 0%, var(--tint-farbe, rgba(0,122,255,.16)), transparent 70%); }
 
 .nav-knoepfe { position: fixed; top: calc(env(safe-area-inset-top) + 30px); right: max(16px, calc(50% - 304px)); display: flex; gap: 10px; z-index: 25; }
 .rund { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--text); border: 0; padding: 0; }
-.rund:active { transform: scale(.92); }
+.rund:active { transform: scale(.9); }
 .rund.akzent { background: var(--accent); color: #fff; border: 0; box-shadow: 0 6px 18px rgba(0, 122, 255, .35), inset 0 1px 0 rgba(255,255,255,.35); }
 
 .kopf { margin: 2px 2px 18px; padding-right: 110px; }
@@ -18,7 +18,7 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) * .45 + 12px); width: min(calc(100% - 40px), 420px);
   display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px; border-radius: 999px; z-index: 30; }
 .tab-pille { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: rgba(120, 120, 128, .16);
-  transform: translateX(calc(100% * var(--i, 0))); transition: transform .4s cubic-bezier(.3, .9, .3, 1.1); }
+  transform: translateX(calc(100% * var(--i, 0))); transition: transform .5s var(--feder); }
 .tabbar button { position: relative; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 5px; font-size: 10.5px; font-weight: 600; color: var(--text); opacity: .62; transition: color .25s, opacity .25s; }
 .tabbar button.an { color: var(--accent); opacity: 1; }
 .tabbar .ic { width: 24px; height: 24px; }
@@ -90,10 +90,13 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .schleier { position: fixed; inset: 0; background: rgba(0, 0, 0, .28); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .schleier.an { opacity: 1; pointer-events: auto; }
 .blatt { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom) * .3); max-width: 620px; margin: 0 auto; border-radius: 36px; padding: 8px 18px 20px; z-index: 41;
-  transform: translateY(calc(100% + 60px)); visibility: hidden; transition: transform .42s cubic-bezier(.25, .9, .3, 1), visibility 0s .42s; max-height: calc(100% - env(safe-area-inset-top) - 30px); overflow-y: auto;
+  transform: translateY(calc(100% + 60px)); visibility: hidden; transition: transform .3s var(--ease-out), visibility 0s .3s; max-height: calc(100% - env(safe-area-inset-top) - 30px); overflow-y: auto;
   --glas: rgba(242, 242, 247, .9); }
 @media all { .blatt { --glas: rgba(28, 28, 30, .9); } }
-.blatt.an { transform: none; visibility: visible; transition: transform .42s cubic-bezier(.25, .9, .3, 1), visibility 0s; }
+.blatt.an { transform: none; visibility: visible; transition: transform .45s var(--ease-drawer), visibility 0s; }
+.blatt.zieht { transition: none !important; }
+.blatt .griff { position: relative; }
+.blatt .griff::after { content: ""; position: absolute; inset: -14px -60px; } /* größere Greiffläche */
 .blatt .griff { width: 38px; height: 5px; border-radius: 3px; background: var(--t3); margin: 0 auto 8px; opacity: .7; }
 .blatt .kopfzeile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .blatt .kopfzeile b { font-size: 17px; font-weight: 650; }
@@ -103,10 +106,10 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 .betragfeld { display: block; width: 100%; border: 0; background: none; outline: none; text-align: center; font-family: ui-rounded, -apple-system, system-ui; font-size: 46px; font-weight: 700; letter-spacing: -.03em; padding: 4px 0 14px; font-variant-numeric: tabular-nums; }
 .betragfeld::placeholder { color: var(--t3); }
 .katwahl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-.katwahl button { border: 0; background: var(--karte); border-radius: 18px; padding: 11px 4px 9px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; transition: transform .15s; }
+.katwahl button { border: 0; background: var(--karte); border-radius: 18px; padding: 11px 4px 9px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
 .katwahl button:active { transform: scale(.95); }
 .katwahl button.an { box-shadow: inset 0 0 0 2.5px var(--c); }
-.datumfeld { border: 0; background: var(--karte2); border-radius: 10px; padding: 6px 10px; font-size: 15px; color: var(--accent); outline: none; }
+.datumfeld { border: 0; background: var(--karte2); border-radius: 10px; padding: 6px 10px; font-size: 16px; color: var(--accent); outline: none; }
 .datumfeld.voll { display: block; width: 100%; margin-bottom: 12px; padding: 10px 12px; }
 .loeschknopf { display: block; width: 100%; border: 0; border-radius: 16px; padding: 13px; background: var(--karte); color: var(--bad); font-weight: 600; margin-top: 8px; }
 .fehler { color: var(--bad); font-size: 14px; text-align: center; min-height: 18px; margin-top: 6px; }
@@ -116,10 +119,10 @@ h1 { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 6p
 
 /* Wischen zum Löschen */
 .zeile.task { padding: 0; overflow: hidden; }
-.task .vorn { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 9px 18px; width: 100%; box-sizing: border-box; background: var(--karte); position: relative; z-index: 1; transition: transform .28s cubic-bezier(.25,.9,.3,1); touch-action: pan-y; }
+.task .vorn { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 9px 18px; width: 100%; box-sizing: border-box; background: var(--karte); position: relative; z-index: 1; transition: transform .32s var(--ease-out), background-color .2s; touch-action: pan-y; }
 .task.zieht .vorn, .task.zieht .loesch { transition: none; }
 .task.zieht .loesch, .task.auf .loesch { visibility: visible; transition-delay: 0s; }
-.task .loesch { visibility: hidden; position: absolute; top: 0; right: 0; bottom: 0; width: 0; padding: 0; overflow: hidden; white-space: nowrap; transition: width .28s cubic-bezier(.25,.9,.3,1), visibility 0s linear .28s; border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }
+.task .loesch { visibility: hidden; position: absolute; top: 0; right: 0; bottom: 0; width: 0; padding: 0; overflow: hidden; white-space: nowrap; transition: width .32s var(--ease-out), visibility 0s linear .32s; border: 0; background: var(--bad); color: #fff; font: inherit; font-size: 16px; font-weight: 600; display: grid; place-items: center; }
 
 
 /* ---------- Liquid-Glass-Look (nur Handy-App) ---------- */
@@ -148,3 +151,35 @@ body.glasapp { --bg: #02040b; --karte: rgba(16, 22, 40, .42); --karte2: rgba(255
 .wk-m { width: 58px; flex: none; }
 .wk-bar { flex: 1; height: 6px; border-radius: 999px; background: var(--karte2); overflow: hidden; }
 .wk-bar i { display: block; height: 100%; border-radius: inherit; }
+
+/* Zeilen: Antippen hellt kurz auf (wie iOS-Listen) */
+.zeile.kat, .zeile.artikel, .task .vorn, .eintrag { transition: background-color .2s; }
+.zeile.kat:active, .zeile.artikel:active, .task:not(.zieht) .vorn:active, .eintrag:active { background-color: rgba(255, 255, 255, .07); transition-duration: 0s; }
+.loesch:active { transform: none; filter: brightness(.88); }
+/* Ganz durchwischen: das Rot übernimmt die Zeile */
+.task.voll .loesch { justify-items: start; padding-left: 26px; }
+.task.weg .vorn, .task.weg .loesch { transition-duration: .2s; }
+
+/* Leere Zustände */
+.leer { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.leer b { margin: 8px 0 0; }
+.leer > span:not(.leer-ic) { max-width: 30ch; line-height: 1.4; }
+.leer-ic { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: var(--lc); background: color-mix(in srgb, var(--lc) 18%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 34px color-mix(in srgb, var(--lc) 22%, transparent); }
+.leer .leer-ic .ic { margin: 0; width: 28px; height: 28px; color: var(--lc); }
+.leer.klein { padding: 16px; font-size: 15px; }
+
+/* Platzhalter beim allerersten Laden */
+.ph-kreis { width: 24px; height: 24px; border-radius: 50%; flex: none; background: rgba(255,255,255,.1); }
+.ph-balken { display: block; height: 14px; border-radius: 7px; background: linear-gradient(90deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,.16) 50%, rgba(255,255,255,.08) 100%) 0 0 / 200% 100%; animation: ph-glanz 1.4s linear infinite; }
+@keyframes ph-glanz { to { background-position: -200% 0; } }
+.platzhalter { pointer-events: none; }
+
+/* Worst-Case: lange Namen, Wörter ohne Leerzeichen, große Beträge */
+.held .reihe > div:first-child { min-width: 0; }
+.held .gross.lang { font-size: 34px; }
+.artikel .haupt { overflow-wrap: anywhere; }
+.kat .oben > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kat .betrag { flex: none; white-space: nowrap; }
+.buchung .haupt > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.buchung .betrag { flex: none; white-space: nowrap; }
+.eintrag .haupt { min-width: 0; }
