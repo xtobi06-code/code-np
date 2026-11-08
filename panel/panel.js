@@ -1,5 +1,5 @@
 import { F, ladeAlle, ausCache, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi, szenenDatum } from '../shared/core.js';
-import { module as modulListe, kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, videoTag, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
+import { module as modulListe, kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
 import { icon, wetterSymbol } from '../shared/icons.js';
@@ -170,7 +170,7 @@ function pixelVersatz() {
 /* ---------- Aufgaben ---------- */
 function zeileHtml(a) {
   const ueber = ueberfaellig(a);
-  const meta = ueber ? (a.faellig ? fmtDM(a.faellig) : videoTag(a) ? fmtDM(videoTag(a)) : kwVon(a) ? metaText(a) : fmtDM(a.datum)) : metaText(a);
+  const meta = ueber ? (a.faellig ? fmtDM(a.faellig) : kwVon(a) ? metaText(a) : fmtDM(a.datum)) : metaText(a);
   const heute = !ueber && istHeute(a) && meta !== '';
   return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
     <button class="loesch" data-loesch aria-label="Löschen">Löschen</button><div class="vorn"><span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div></div>`;
