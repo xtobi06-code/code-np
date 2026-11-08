@@ -93,7 +93,9 @@ function freitagVon(kw) {
   const [y, w] = kw.split('-W').map(Number);
   return isoDate(addDays(montag(new Date(y, 0, 4)), (w - 1) * 7 + 4));
 }
-const sk = (a) => a.faellig || (kwVon(a) ? freitagVon(kwVon(a)) : '') || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
+// Videos zählen beim Sortieren wie ein Montag ihrer Woche, damit sie vor Übungen und Wochenaufgaben stehen.
+const montagVon = (kw) => isoDate(addDays(montag(new Date(Number(kw.split('-W')[0]), 0, 4)), (Number(kw.split('-W')[1]) - 1) * 7));
+const sk = (a) => a.faellig || (kwVon(a) ? (a.typ === 'Videos' ? montagVon(kwVon(a)) : freitagVon(kwVon(a))) : '') || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
 // Kalenderwoche einer Aufgabe: bei Wochenaufgaben und Videos (nach Datum der Vorlesung).
 export const kwVon = (a) => a.kw || (a.typ === 'Videos' && a.datum ? kwKey(parseDate(a.datum)) : null);
 export function istHeute(a, jetzt = new Date()) {
