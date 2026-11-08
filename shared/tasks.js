@@ -98,14 +98,17 @@ const montagVon = (kw) => isoDate(addDays(montag(new Date(Number(kw.split('-W')[
 const sk = (a) => a.faellig || (kwVon(a) ? (a.typ === 'Videos' ? montagVon(kwVon(a)) : freitagVon(kwVon(a))) : '') || a.datum || a.ab || (a.erstellt || '').slice(0, 10) || '';
 // Kalenderwoche einer Aufgabe: bei Wochenaufgaben und Videos (nach Datum der Vorlesung).
 export const kwVon = (a) => a.kw || (a.typ === 'Videos' && a.datum ? kwKey(parseDate(a.datum)) : null);
+// Videos gelten als am Montag ihrer Woche fällig (wie ein Eintrag mit diesem Datum).
+export const videoTag = (a) => (a.typ === 'Videos' && !a.faellig && kwVon(a) ? montagVon(kwVon(a)) : null);
 export function istHeute(a, jetzt = new Date()) {
   const h = isoDate(jetzt);
   if (a.faellig) return a.faellig === h;
-  if (a.typ === 'Videos') return false; // Videos erscheinen vorab, sind aber nicht für heute fällig
+  if (videoTag(a)) return videoTag(a) === h;
   return a.ab === h || a.datum === h || (!a.regel && (a.erstellt || '').startsWith(h));
 }
 export function ueberfaellig(a, jetzt = new Date()) {
   if (a.faellig) return a.faellig < isoDate(jetzt);
+  if (videoTag(a)) return videoTag(a) < isoDate(jetzt);
   if (kwVon(a)) return kwVon(a) < kwKey(jetzt); // Wochenaufgaben sind bis Wochenende fällig
   return !!(a.regel && a.datum) && a.datum < isoDate(jetzt);
 }
