@@ -20,7 +20,7 @@ const LS = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
 };
-const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', wocheAuf: false, ...LS.get('np-ansicht', {}), offenKat: null, zeigeErledigt: false, neuModul: '', neuFaellig: '' };
+const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', wocheAuf: false, ...LS.get('np-ansicht', {}), offenKat: null, monateAuf: null, alleMonate: false, zeigeErledigt: false, neuModul: '', neuFaellig: '' };
 if (!TABS.includes(S.tab)) S.tab = 'todos';
 // Wischen zum Löschen in To-dos und „Zuletzt“ (kurz: Knopf zeigen, ganz durch: löschen)
 const W = wischLoeschen({ zeile: '#todo-liste .task, #fin-letzte .task, #einkauf-liste .task' });
@@ -86,6 +86,7 @@ document.querySelectorAll('.segment[data-seg]').forEach((seg) => seg.addEventLis
   if (!b) return;
   S[seg.dataset.seg] = b.dataset.v;
   S.offenKat = null;
+  S.monateAuf = null;
   merken();
   zeigeTab();
 }));
@@ -468,14 +469,34 @@ function renderFinanzen() {
       <div class="haupt"><div class="oben"><span>${esc(x.name)}</span><span class="betrag">${euro(x.wert)}${x.budget ? ` <small>/ ${euro0(x.budget)}</small>` : ''}</span></div>
       <div class="balken"><span class="${s}" data-w="kat-${z}-${esc(x.name)}" style="width:${breite}%"></span></div></div></div>${eintraege}`;
   }).join('');
-  const letzte = aktive(F['kosten.json']).filter((b) => b.quelle !== 'dauer').sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 5);
-  $('fin-letzte').innerHTML = !letzte.length
-    ? `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe"><div class="leer klein"><span>Noch keine Ausgaben. Tippe oben auf <b>+</b>.</span></div></div>`
-    : `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe">${letzte.map((b) => {
+  const alle = aktive(F['kosten.json']).filter((b) => b.quelle !== 'dauer').sort((a, b) => b.datum.localeCompare(a.datum));
+  const zeile = (b) => {
     const kk = katVon(b.kategorie);
     return `<div class="zeile task buchung" data-buchung="${esc(b.id)}"><div class="vorn"><span class="symbol" style="background:${kk.farbe}">${icon(katSymbol(kk.name, kk.symbol), 17, 2.2)}</span>
       <div class="haupt"><div>${esc(kk.name)}</div><div class="unter">${esc(fmtWtDM(b.datum))}${b.text ? ` · ${esc(b.text)}` : ''}</div></div><span class="betrag">${euro(b.betrag)}</span></div><button class="loesch" data-bloesch="${esc(b.id)}">Löschen</button></div>`;
-  }).join('')}</div>`;
+  };
+  const jetztJahr = String(new Date().getFullYear());
+  const gruppiert = (liste) => {
+    const monate = [...new Set(liste.map((b) => b.datum.slice(0, 7)))];
+    if (!S.monateAuf) S.monateAuf = new Set(monate.slice(0, 1));
+    return `<div class="gruppe">${monate.map((m) => {
+      const im = liste.filter((b) => b.datum.startsWith(m));
+      const auf = S.monateAuf.has(m);
+      return `<div class="zeile monatkopf" data-monat="${m}"><span class="mk-name">${monatName(m)}${m.slice(0, 4) !== jetztJahr ? ` ${m.slice(0, 4)}` : ''}</span><span class="mk-n">${im.length} ${im.length === 1 ? 'Eintrag' : 'Einträge'}</span><span class="mk-summe">${euro(im.reduce((x, b) => x + b.betrag, 0))}</span><i class="wk-pfeil${auf ? ' auf' : ''}"></i></div>${auf ? im.map(zeile).join('') : ''}`;
+    }).join('')}</div>`;
+  };
+  let html;
+  if (!alle.length) {
+    html = `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe"><div class="leer klein"><span>Noch keine Ausgaben. Tippe oben auf <b>+</b>.</span></div></div>`;
+  } else if (z === 'monat' && !S.alleMonate) {
+    const frueher = alle.length > 5 || alle.some((b) => b.datum.slice(0, 7) !== alle[0].datum.slice(0, 7));
+    html = `<div class="gruppe-titel"><span>Zuletzt</span></div><div class="gruppe">${alle.slice(0, 5).map(zeile).join('')}</div>${frueher ? '<button class="textknopf" id="fin-alle">Alle Monate anzeigen</button>' : ''}`;
+  } else {
+    const grenze = z === '3m' ? 3 : z === '12m' ? 12 : 999;
+    const erlaubt = new Set([...new Set(alle.map((b) => b.datum.slice(0, 7)))].slice(0, grenze));
+    html = `<div class="gruppe-titel"><span>Ausgaben nach Monat</span><span class="zahl">${z === '3m' ? 'letzte 3 Monate' : z === '12m' ? 'letzte 12 Monate' : 'alle Monate'}</span></div>${gruppiert(alle.filter((b) => erlaubt.has(b.datum.slice(0, 7))))}${z === 'monat' ? '<button class="textknopf" id="fin-alle">Weniger anzeigen</button>' : ''}`;
+  }
+  $('fin-letzte').innerHTML = html;
   weich($('fin-held'));
   weich($('fin-kat'));
   zeigeNeue($('fin-letzte'));
@@ -493,6 +514,9 @@ $('tab-finanzen').addEventListener('click', (e) => {
     rausfahren(zeile).then(weg);
     return;
   }
+  const mk = e.target.closest('[data-monat]');
+  if (mk) { const m = mk.dataset.monat; if (S.monateAuf.has(m)) S.monateAuf.delete(m); else S.monateAuf.add(m); renderFinanzen(); return; }
+  if (e.target.closest('#fin-alle')) { S.alleMonate = !S.alleMonate; S.monateAuf = null; renderFinanzen(); return; }
   const b = e.target.closest('[data-buchung]');
   if (b && b.classList.contains('task')) {
     if (W.eben()) return;

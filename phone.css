@@ -212,3 +212,11 @@ body.glasapp.gescrollt::before { opacity: 1; }
 .hauptknopf { display: block; width: 100%; border: 0; border-radius: 16px; padding: 14px; background: var(--accent); color: #fff; font-weight: 650; }
 .hauptknopf:disabled { opacity: .5; }
 #bericht-knopf { display: block; margin: -8px auto 22px; }
+
+/* Ausgaben nach Monat */
+.monatkopf { min-height: 46px; gap: 10px; cursor: pointer; -webkit-user-select: none; user-select: none; background: var(--karte2); transition: background-color .2s; }
+.monatkopf:active { background-color: rgba(255, 255, 255, .07); transition-duration: 0s; }
+.monatkopf .mk-name { font-weight: 650; }
+.monatkopf .mk-n { color: var(--t2); font-size: 13px; flex: 1; }
+.monatkopf .mk-summe { font-variant-numeric: tabular-nums; font-weight: 600; }
+.monatkopf .wk-pfeil { margin-top: -4px; }
