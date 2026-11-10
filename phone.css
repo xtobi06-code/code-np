@@ -194,8 +194,10 @@ body.glasapp { --bg: #02040b; --karte: rgba(16, 22, 40, .42); --karte2: rgba(255
 .wk-pfeil.auf { transform: translateY(4px) rotate(-135deg); }
 
 /* Kopf: dunkler Verlauf, sobald Inhalt unter den runden Knöpfen durchläuft */
-body.glasapp::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 104px); z-index: 20; pointer-events: none; opacity: 0; transition: opacity .25s;
-  background: linear-gradient(to bottom, rgba(2, 4, 11, .92) 0%, rgba(2, 4, 11, .7) 50%, rgba(2, 4, 11, 0) 100%); }
+body.glasapp::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 124px); z-index: 20; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: linear-gradient(to bottom, rgba(2, 4, 11, .92) 0%, rgba(2, 4, 11, .72) 35%, rgba(2, 4, 11, .38) 62%, rgba(2, 4, 11, .12) 82%, rgba(2, 4, 11, 0) 94%);
+  /* zusätzlich ausmaskiert, damit die Unterkante in Safari sicher nicht als Linie stehen bleibt */
+  -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 96%); mask-image: linear-gradient(to bottom, #000 40%, transparent 96%); }
 body.glasapp.gescrollt::before { opacity: 1; }
 /* Tab-Leiste: dichter, damit Listentext darunter nicht mitzulesen ist */
 .glasapp .tabbar { background: rgba(12, 16, 30, .76); -webkit-backdrop-filter: blur(30px) saturate(170%); backdrop-filter: blur(30px) saturate(170%); }
