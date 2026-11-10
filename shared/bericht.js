@@ -60,8 +60,7 @@ export function zeichneBericht(JsPDF, { kosten, kats, einst, dauer }, monat, jet
   /* ---------- Kopf ---------- */
   text('Monatsbericht', L, 23, { size: 22, fett: true });
   text(`${monatName(monat)} ${jahr}`, R, 23, { size: 14, fett: true, align: 'right' });
-  const wer = einst?.name ? `${einst.name} · ` : '';
-  text(`${wer}${laufend ? `laufender Monat, Stand ${datum(jetzt)}` : 'abgeschlossener Monat'}`, L, 29.5, { size: 9.5, c: GRAU });
+  text(`Stand ${datum(jetzt)}`, L, 29.5, { size: 9.5, c: GRAU });
   strich(34);
 
   /* ---------- Gewählter Monat ---------- */
@@ -144,9 +143,9 @@ export function zeichneBericht(JsPDF, { kosten, kats, einst, dauer }, monat, jet
   /* ---------- Langzeit ---------- */
   strich(219);
   titel(`Verlauf${lang.length > 1 ? ` der letzten ${lang.length} Monate` : ''}`, 228);
-  const cx0 = L + 11; const cx1 = R - 2; const cy0 = 236; const cy1 = 266;
+  const cx0 = L + 11; const cx1 = R - 2; const cy0 = 238; const cy1 = 274;
   const werte = lang.map((d) => d.wert);
-  const max = Math.max(u.budget, ...werte, 10) * 1.18;
+  const max = Math.max(...werte, 10) * 1.18;
   const stufe = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000].find((s) => max / s <= 4) || 10000;
   const py = (v) => cy1 - ((cy1 - cy0) * v) / max;
   const px = (i) => (lang.length === 1 ? (cx0 + cx1) / 2 : cx0 + 6 + ((cx1 - cx0 - 12) * i) / (lang.length - 1));
@@ -154,11 +153,6 @@ export function zeichneBericht(JsPDF, { kosten, kats, einst, dauer }, monat, jet
   for (let v = 0; v <= max; v += stufe) {
     farbe(v === 0 ? LINIE : SPUR, 'draw'); doc.line(cx0, py(v), cx1, py(v));
     text(Z0.format(v), cx0 - 2, py(v) + 1, { size: 7.5, c: HELL, align: 'right' });
-  }
-  if (u.budget) {
-    doc.setLineWidth(0.3); doc.setLineDashPattern([1.4, 1.4], 0); farbe(ROT, 'draw');
-    doc.line(cx0, py(u.budget), cx1, py(u.budget));
-    doc.setLineDashPattern([], 0);
   }
   if (lang.length === 1) {
     farbe(BLAU, 'fill'); doc.roundedRect(px(0) - 7, py(werte[0]), 14, Math.max(0.6, cy1 - py(werte[0])), 1.2, 1.2, 'F');
@@ -179,14 +173,13 @@ export function zeichneBericht(JsPDF, { kosten, kats, einst, dauer }, monat, jet
   const volle = lang.filter((d) => d.monat !== monatKey(jetzt));
   const basis = volle.length ? volle : lang;
   const schnitt = basis.reduce((s, d) => s + d.wert, 0) / Math.max(1, basis.length);
-  const hoch = basis.reduce((a, d) => (d.wert > a.wert ? d : a), basis[0] || { wert: 0, monat });
-  const teile = lang.length > 1
-    ? [`Ø ${eur0(schnitt)} pro Monat${volle.length && volle.length < lang.length ? ' (abgeschlossene Monate)' : ''}`, `höchster Monat: ${monatName(hoch.monat)} mit ${eur0(hoch.wert)}`]
-    : ['Die Kurve entsteht, sobald ein zweiter Monat dazukommt.'];
-  if (u.budget) teile.push(`gestrichelt: Budget ${eur0(u.budget)}`);
-  text(teile.join('   ·   '), L, 279, { size: 9, c: GRAU });
-
-  text(`Erstellt am ${datum(jetzt)} mit der Alltag-App · Verlauf und Kategorien ohne Fixkosten`, L, 289, { size: 7.5, c: HELL });
+  if (lang.length > 1) {
+    const zahl = eur0(schnitt);
+    text(zahl, R, 230.5, { size: 15, fett: true, align: 'right' });
+    text(`Ø pro ${volle.length && volle.length < lang.length ? 'abgeschlossenem ' : ''}Monat`, R - breite(zahl, 15, true) - 2.5, 230.5, { size: 8.5, c: GRAU, align: 'right' });
+  } else {
+    text('Die Kurve entsteht, sobald ein zweiter Monat dazukommt.', R, 230.5, { size: 8.5, c: GRAU, align: 'right' });
+  }
   return doc;
 }
 
