@@ -104,6 +104,7 @@ export function istHeute(a, jetzt = new Date()) {
   const h = isoDate(jetzt);
   if (a.faellig) return a.faellig === h;
   if (videoTag(a)) return videoTag(a) === h;
+  if (a.kw) return false; // Wochenaufgaben (TÜ, Praktikum …) stehen unter „Offen“, auch am Montag, an dem sie entstehen
   return a.ab === h || a.datum === h || (!a.regel && (a.erstellt || '').startsWith(h));
 }
 export function ueberfaellig(a, jetzt = new Date()) {
