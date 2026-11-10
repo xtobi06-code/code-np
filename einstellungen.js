@@ -84,9 +84,6 @@ function finanzenHtml() {
     <div style="flex-basis:100%;display:flex;align-items:center;gap:10px;padding-left:63px;font-size:15px">
       <span style="flex:1"></span><input class="zahl" style="width:64px" inputmode="decimal" data-p="dauer.${i}.betrag" value="${esc(d.betrag)}"> € pro Monat</div></div>`)).join('')}
     <div class="zeile"><button class="textknopf" style="padding:0" data-neu="dauer">${'Dauerkosten hinzufügen'}</button></div></div>
-  <div class="gruppe-titel">Buchungen importieren</div>
-  <div class="gruppe"><div class="zeile"><label class="textknopf" style="padding:0;cursor:pointer">Datei wählen (.json)<input type="file" id="import-datei" accept=".json,application/json" hidden></label><span id="import-info" style="margin-left:auto;color:var(--t2);font-size:14px"></span></div></div>
-  <p class="fuss">Fügt Buchungen aus einer JSON-Datei hinzu (Liste oder {"buchungen": [...]}). Bereits vorhandene IDs werden übersprungen, mehrfaches Importieren ist also unschädlich.</p>
   ${knoepfe('finanzen')}`;
 }
 
@@ -591,24 +588,3 @@ async function laden() {
 
 zeichne();
 laden();
-
-document.addEventListener('change', async (e) => {
-  if (e.target.id !== 'import-datei') return;
-  const info = $('import-info');
-  const datei = e.target.files?.[0];
-  if (!datei) return;
-  try {
-    const roh = JSON.parse(await datei.text());
-    const liste = (Array.isArray(roh) ? roh : roh.buchungen || []).filter((b) => b && b.id && b.datum && Number.isFinite(Number(b.betrag)) && b.kategorie);
-    if (!liste.length) throw new Error('leer');
-    let neu = 0;
-    await aendere('kosten.json', (d) => {
-      const ids = new Set((d.buchungen || []).map((b) => b.id));
-      const dazu = liste.filter((b) => !ids.has(b.id)).map((b) => ({ ...b, betrag: Number(b.betrag), quelle: b.quelle || 'import' }));
-      neu = dazu.length;
-      return { ...d, buchungen: [...(d.buchungen || []), ...dazu] };
-    }, `${liste.length} Buchungen importiert`);
-    info.textContent = `${neu} neu, ${liste.length - neu} schon da`;
-  } catch { info.textContent = 'Datei nicht lesbar'; }
-  e.target.value = '';
-});
