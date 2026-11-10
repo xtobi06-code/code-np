@@ -21,9 +21,14 @@ const queues = {};
 let fehlerMelden = () => {};
 export function beiFehler(fn) { fehlerMelden = fn; }
 
+// Merkt je Datei, ob der letzte Abruf nur aus dem Zwischenspeicher kam.
+const offlineStand = {};
+export const istOffline = () => Object.values(offlineStand).some(Boolean);
+
 export async function ladeDatei(p) {
   if (pending[p]) return F[p];
   const r = await lesen(p);
+  offlineStand[p] = !!(r && r.offline);
   F[p] = r ? r.data : structuredClone(STANDARD[p]);
   for (const e of wsLesen()) if (e.p === p) F[p] = anwenden(e.op)(F[p]);
   if (p === 'einstellungen.json') setzeModule(F[p].module);
@@ -55,7 +60,7 @@ export function aendere(p, fn, nachricht, still = false) {
   const prom = (queues[p] || Promise.resolve()).then(job);
   queues[p] = prom.catch(() => {});
   return prom.then(
-    (r) => { pending[p]--; if (!pending[p]) F[p] = r.data; if (p === 'einstellungen.json') setzeModule(F[p].module); return r; },
+    (r) => { pending[p]--; offlineStand[p] = false; if (!pending[p]) F[p] = r.data; if (p === 'einstellungen.json') setzeModule(F[p].module); return r; },
     async (e) => {
       pending[p]--;
       if (!still) fehlerMelden(e);
@@ -71,21 +76,14 @@ export async function routine(jetzt = new Date()) {
   if (e && F['regeln.json'] && F['aufgaben.json']) {
     const neu = erzeugen(e, F['regeln.json'].regeln || [], F['aufgaben.json'].aufgaben || [], jetzt);
     if (neu.length) {
-      jobs.push(aendere('aufgaben.json', (d) => {
-        const ids = new Set(d.aufgaben.map((a) => a.id));
-        d.aufgaben.push(...neu.filter((a) => !ids.has(a.id)));
-        return d;
-      }, `Aufgaben erzeugt (${neu.length})`));
+      // Über die Warteschlange: Ohne Netz bleiben die neuen Aufgaben sichtbar und werden später nachgereicht.
+      jobs.push(aendereOp('aufgaben.json', { liste: 'aufgaben', neu }, `Aufgaben erzeugt (${neu.length})`, true));
     }
   }
   if (F['dauerkosten.json'] && F['kosten.json']) {
     const b = dauerFaellig(F['dauerkosten.json'], F['kosten.json'], jetzt);
     if (b.length) {
-      jobs.push(aendere('kosten.json', (d) => {
-        const ids = new Set(d.buchungen.map((x) => x.id));
-        d.buchungen.push(...b.filter((x) => !ids.has(x.id)));
-        return d;
-      }, 'Dauerkosten gebucht'));
+      jobs.push(aendereOp('kosten.json', { liste: 'buchungen', neu: b }, 'Dauerkosten gebucht', true));
     }
   }
   await Promise.allSettled(jobs);
@@ -131,34 +129,55 @@ export function anwenden(op) {
 let offlineMelden = () => {};
 export function beiOffline(fn) { offlineMelden = fn; }
 
-export function aendereOp(p, op, nachricht) {
+// Wendet alle wartenden Operationen einer Datei in ihrer Reihenfolge an. So kann eine ältere,
+// noch nicht nachgereichte Änderung nie eine neuere überschreiben.
+function alleOps(p) {
+  const fn = (d) => {
+    const es = wsLesen().filter((e) => e.p === p);
+    fn.ids = es.map((e) => e.id);
+    return es.reduce((x, e) => anwenden(e.op)(x), d);
+  };
+  return fn;
+}
+const wsOhne = (ids) => { const weg = new Set(ids); wsSchreiben(wsLesen().filter((e) => !weg.has(e.id))); };
+const wsSichtbar = () => wsLesen().filter((e) => !e.auto).length;
+
+// auto: vom System erzeugt (z. B. neue Aufgaben nach Stundenplan), ohne Offline-Meldung
+export function aendereOp(p, op, nachricht, auto = false) {
   const eintrag = { id: Math.random().toString(36).slice(2), p, op, nachricht };
+  if (auto) eintrag.auto = true;
   wsSchreiben([...wsLesen(), eintrag]);
-  return aendere(p, anwenden(op), nachricht, true).then(
-    (r) => { wsSchreiben(wsLesen().filter((e) => e.id !== eintrag.id)); return r; },
+  const fn = alleOps(p);
+  return aendere(p, fn, nachricht, true).then(
+    (r) => { wsOhne([...(fn.ids || []), eintrag.id]); return r; },
     (e) => {
-      if (e instanceof FehlerToken) { wsSchreiben(wsLesen().filter((x) => x.id !== eintrag.id)); fehlerMelden(e); } else offlineMelden(wsLesen().length);
+      if (e instanceof FehlerToken) { wsOhne([eintrag.id]); fehlerMelden(e); } else if (!auto) offlineMelden(wsSichtbar());
       throw e;
     },
   );
 }
 
 let holtNach = false;
+// Reicht alles Wartende nach, je Datei in einem Schreibvorgang. Gibt die Zahl der eigenen Änderungen zurück.
 export async function nachholen() {
   if (holtNach) return 0;
   holtNach = true;
   let erledigt = 0;
   try {
-    for (const e of wsLesen()) {
+    for (const p of [...new Set(wsLesen().map((e) => e.p))]) {
+      const fn = alleOps(p);
+      const n = wsLesen().filter((e) => e.p === p).length;
+      const job = () => aendern(p, fn, n === 1 ? wsLesen().find((e) => e.p === p)?.nachricht || 'Nachgereicht' : `Nachgereicht (${n})`, structuredClone(STANDARD[p]));
+      const prom = (queues[p] || Promise.resolve()).then(job);
+      queues[p] = prom.catch(() => {});
       try {
-        const r = await aendern(e.p, anwenden(e.op), e.nachricht, structuredClone(STANDARD[e.p]));
-        if (!pending[e.p]) F[e.p] = r.data;
-        wsSchreiben(wsLesen().filter((x) => x.id !== e.id));
-        erledigt++;
-      } catch (err) {
-        if (err instanceof FehlerToken) break;
-        break;
-      }
+        const r = await prom;
+        offlineStand[p] = false;
+        if (!pending[p]) F[p] = r.data;
+        const ids = new Set(fn.ids || []);
+        erledigt += wsLesen().filter((e) => ids.has(e.id) && !e.auto).length;
+        wsOhne([...ids]);
+      } catch { break; }
     }
   } finally { holtNach = false; }
   return erledigt;

@@ -82,8 +82,11 @@ body.ohne-glas .glas { -webkit-backdrop-filter: none; backdrop-filter: none; bac
 .badge::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .2; z-index: -1; }
 .meta { font-size: .875rem; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .task.heute .meta { color: #fff; font-weight: 650; background: rgba(255,255,255,.17); padding: .12rem .5rem; border-radius: 999px; }
-.task.ueber .meta { color: var(--t2); }
-.mehr { font-size: .875rem; color: var(--t2); padding: .35rem 0 0 2.5rem; }
+.task.ueber .meta { color: #ff9a91; }
+.l-gruppe { display: flex; justify-content: space-between; align-items: baseline; padding: .75rem 0 .1rem; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--t2); }
+.l-gruppe:first-child { padding-top: .3rem; }
+.l-gruppe span { font-variant-numeric: tabular-nums; }
+.l-gruppe.ueber { color: #ff9a91; }
 .leer { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; color: var(--t2); font-size: 1rem; }
 .leer .ic { width: 2.4rem; height: 2.4rem; color: #34c759; }
 
@@ -200,7 +203,7 @@ body.nachtzeit.auf-uhr .nacht-schleier { opacity: .96; }
   .uebersicht { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .uebersicht > .spalte.links { grid-column: 1 / -1; flex-direction: row; }
   .uebersicht > .spalte.links .sperr { flex: 1; }
-  .uebersicht > .spalte.links .stapel { flex: 1; height: auto; min-height: 15rem; }
+  .uebersicht > .spalte.links .stapel { flex: 1; height: auto; min-height: 17.5rem; }
   .kacheln.gross { grid-template-columns: repeat(3, 1fr); }
 }
 
@@ -209,7 +212,8 @@ body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 
 body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 9rem; z-index: 1; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.013) 8%, rgba(0,0,0,.05) 18%, rgba(0,0,0,.11) 29%, rgba(0,0,0,.19) 40%, rgba(0,0,0,.29) 51%, rgba(0,0,0,.41) 62%, rgba(0,0,0,.55) 73%, rgba(0,0,0,.71) 83%, rgba(0,0,0,.87) 92%, #000 98%); }
 
 /* Einstellungen-Knopf neben dem Datum */
-.einst { position: absolute; top: 2.6rem; right: .2rem; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,.85); text-decoration: none; z-index: 2; }
+.sperr-wetter { min-height: 2.3rem; padding-right: 2.7rem; }
+.einst { position: absolute; top: 8.78rem; right: .1rem; width: 2.3rem; height: 2.3rem; border-radius: 50%; display: grid; place-items: center; color: rgba(255,255,255,.85); text-decoration: none; z-index: 2; }
 .einst .ic { width: 1.15rem; height: 1.15rem; }
 body.nachtmodus .einst { opacity: 0; pointer-events: none; }
 
@@ -242,6 +246,9 @@ body.dialog-an .dialog { opacity: 1; pointer-events: auto; transform: translate(
 .d-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .9rem; }
 .d-chip { border: 0; border-radius: 999px; padding: .5rem 1rem; font: inherit; font-size: 1.0625rem; font-weight: 600; color: #fff; background: rgba(255,255,255,.14); }
 .d-chip.an { background: #fff; color: #111; }
+.d-datum { position: relative; display: inline-flex; align-items: center; gap: .4rem; }
+.d-datum .ic { width: 1rem; height: 1rem; }
+.d-datum input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; }
 .d-ok { width: 100%; border: 0; border-radius: 1rem; padding: .9rem; font: inherit; font-size: 1.1875rem; font-weight: 650; color: #fff; background: #0a84ff; margin-top: .3rem; }
 .d-ok:disabled { opacity: .4; }
 .d-liste { display: flex; flex-direction: column; margin: 0 -.4rem .6rem; }

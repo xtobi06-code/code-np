@@ -1,4 +1,4 @@
-import { F, ladeAlle, ausCache, aendere, aendereOp, nachholen, beiOffline, offenNachzureichen, routine, beiFehler, FehlerToken } from './shared/core.js';
+import { F, ladeAlle, ausCache, aendereOp, istOffline, nachholen, beiOffline, offenNachzureichen, routine, beiFehler, FehlerToken } from './shared/core.js';
 import { erzeugen, badgeHtml, kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
@@ -19,16 +19,16 @@ const LS = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
 };
-const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', ...LS.get('np-ansicht', {}), offenKat: null, zeigeErledigt: false, neuModul: '', neuFaellig: '' };
+const S = { tab: 'todos', finAnsicht: 'uebersicht', zeitraum: 'monat', todoListe: 'studium', verlaufKat: '', wocheAuf: false, ...LS.get('np-ansicht', {}), offenKat: null, zeigeErledigt: false, neuModul: '', neuFaellig: '' };
 if (!TABS.includes(S.tab)) S.tab = 'todos';
 // Wischen zum Löschen in To-dos und „Zuletzt“ (kurz: Knopf zeigen, ganz durch: löschen)
-const W = wischLoeschen({ zeile: '#todo-liste .task, #fin-letzte .task' });
+const W = wischLoeschen({ zeile: '#todo-liste .task, #fin-letzte .task, #einkauf-liste .task' });
 // Platzhalter, solange noch nie Daten geladen wurden
 let bereit = false;
 const phZeilen = (n) => Array.from({ length: n }, (_, i) => `<div class="zeile platzhalter" aria-hidden="true"><span class="ph-kreis"></span><span class="ph-balken" style="width:${[62, 44, 70, 52, 38][i % 5]}%"></span></div>`).join('');
 const platzhalter = (n = 4) => `<div class="gruppe">${phZeilen(n)}</div>`;
 const leer = (ic, farbe, titel, text, extra = '') => `<div class="gruppe"><div class="leer"><span class="leer-ic" style="--lc:${farbe}">${icon(ic, 28, 2.2)}</span><b>${titel}</b><span>${text}</span>${extra}</div></div>`;
-const merken = () => LS.set('np-ansicht', { tab: S.tab, finAnsicht: S.finAnsicht, zeitraum: S.zeitraum, todoListe: S.todoListe, verlaufKat: S.verlaufKat });
+const merken = () => LS.set('np-ansicht', { tab: S.tab, finAnsicht: S.finAnsicht, zeitraum: S.zeitraum, todoListe: S.todoListe, verlaufKat: S.verlaufKat, wocheAuf: S.wocheAuf });
 const heute = () => isoDate(new Date());
 const morgen = () => isoDate(addDays(new Date(), 1));
 
@@ -69,7 +69,6 @@ function zeigeTab() {
   segmenteSetzen();
   $('fin-uebersicht').hidden = S.finAnsicht !== 'uebersicht';
   $('fin-verlauf').hidden = S.finAnsicht !== 'verlauf';
-  $('todo-input').placeholder = S.todoListe === 'studium' ? 'Neue Aufgabe' : 'Neue Aufgabe';
   render();
 }
 $('tabbar').addEventListener('click', (e) => {
@@ -144,8 +143,17 @@ function wochenKarte() {
   const nach = {};
   auf.forEach((a) => { const m = nach[a.modul] || (nach[a.modul] = { g: 0, f: 0 }); m.g++; if (a.status === 'erledigt') m.f++; });
   const zeilen = Object.entries(nach).map(([m, v]) => `<div class="zeile wk"><span class="wk-m">${badgeHtml(m)}</span><span class="wk-bar"><i data-w="wk-${esc(m)}" style="width:${(v.f / v.g) * 100}%;background:${modulFarbe(m)}"></i></span><span class="neben">${v.f}/${v.g}</span></div>`).join('');
-  return `<div class="gruppe-titel"><span>Diese Woche · KW ${isoWeek(jetzt)}</span><span class="zahl"><span data-n="wk-fertig" data-v="${fertig}">${fertig}</span> von ${auf.length} erledigt</span></div><div class="gruppe">${zeilen}</div>`;
+  // Zugeklappt: ein Balken mit einem Abschnitt je Modul. Antippen zeigt die Module einzeln.
+  const kurz = `<div class="zeile wk-kurz" data-woche role="button" aria-expanded="${S.wocheAuf}"><span class="wk-seg">${Object.entries(nach).map(([m, v]) => `<span style="flex:${v.g};--c:${modulFarbe(m)}"><i data-w="wkk-${esc(m)}" style="width:${(v.f / v.g) * 100}%"></i></span>`).join('')}</span><span class="wk-pfeil${S.wocheAuf ? ' auf' : ''}"></span></div>`;
+  return `<div class="gruppe-titel"><span>Diese Woche · KW ${isoWeek(jetzt)}</span><span class="zahl"><span data-n="wk-fertig" data-v="${fertig}">${fertig}</span> von ${auf.length} erledigt</span></div><div class="gruppe">${kurz}${S.wocheAuf ? zeilen : ''}</div>`;
 }
+$('woche-karte').addEventListener('click', (e) => {
+  if (!e.target.closest('[data-woche]')) return;
+  S.wocheAuf = !S.wocheAuf;
+  merken();
+  $('woche-karte').innerHTML = wochenKarte();
+  weich($('woche-karte'));
+});
 function renderTodos() {
   $('woche-karte').innerHTML = S.todoListe === 'studium' ? wochenKarte() : '';
   weich($('woche-karte'));
@@ -169,7 +177,7 @@ function renderTodos() {
 $('erledigt-umschalten').onclick = () => { S.zeigeErledigt = !S.zeigeErledigt; renderTodos(); };
 
 function setzeStatus(id, neu) {
-  const zeit = new Date().toISOString();
+  const zeit = isoZeit(new Date());
   return aendereOp('aufgaben.json', { liste: 'aufgaben', ids: [id], felder: { status: neu, erledigt: neu === 'erledigt' ? zeit : null } },
     neu === 'erledigt' ? 'Abgehakt' : neu === 'geloescht' ? 'Gelöscht' : 'Wiederhergestellt').catch(() => {});
 }
@@ -210,12 +218,12 @@ $('tab-todos').addEventListener('click', (e) => {
 // Eingabe mit Zubehör (Modul und Fälligkeit)
 // effektiv: Datum oder Woche, das eine automatisch erzeugte Aufgabe schon hat (wird als gewählt angezeigt, ohne es zu ändern)
 function faelligChips(wert, id, effektiv = '') {
-  const opt = [['', 'Kein Datum'], [heute(), 'Heute'], [morgen(), 'Morgen']];
+  // Automatische Aufgaben haben immer ihren Termin: Der erste Chip zeigt ihn und stellt ihn wieder her.
+  const opt = [['', effektiv || 'Kein Datum'], [heute(), 'Heute'], [morgen(), 'Morgen']];
   const eigen = wert && wert !== heute() && wert !== morgen();
-  const vorhanden = !wert && effektiv;
-  const nichts = opt.map(([v, t]) => (v === '' ? `<button class="chip${wert === v && !vorhanden ? ' an' : ''}" data-faellig="">${t}</button>` : `<button class="chip${wert === v ? ' an' : ''}" data-faellig="${v}">${t}</button>`)).join('');
+  const nichts = opt.map(([v, t]) => `<button class="chip${wert === v ? ' an' : ''}" data-faellig="${v}">${esc(t)}</button>`).join('');
   return nichts
-    + `<label class="chip${eigen || vorhanden ? ' an' : ''}" style="position:relative">${icon('kalender', 15, 2.2)}${eigen ? fmtWtDM(wert) : vorhanden ? esc(effektiv) : 'Datum'}<input type="date" data-datum="${id}" value="${eigen ? wert : ''}" style="position:absolute;inset:0;opacity:0"></label>`;
+    + `<label class="chip${eigen ? ' an' : ''}" style="position:relative">${icon('kalender', 15, 2.2)}${eigen ? fmtWtDM(wert) : 'Datum'}<input type="date" data-datum="${id}" value="${eigen ? wert : ''}" style="position:absolute;inset:0;opacity:0"></label>`;
 }
 function modulChips(wert) {
   return [['', 'Ohne Modul']].concat(Object.keys(module()).map((k) => [k, k])).map(([v, t]) =>
@@ -296,7 +304,7 @@ $('blatt-aufgabe').addEventListener('click', (e) => {
   const m = e.target.closest('[data-modul]');
   const f = e.target.closest('[data-faellig]');
   if (m) { bearbeite.modul = m.dataset.modul; aufgabeZeichnen(); }
-  if (f) { bearbeite.faellig = f.dataset.faellig; bearbeite.eff = ''; aufgabeZeichnen(); }
+  if (f) { bearbeite.faellig = f.dataset.faellig; aufgabeZeichnen(); }
 });
 $('blatt-aufgabe').addEventListener('change', (e) => { if (e.target.dataset.datum === 'bearbeiten') bearbeite.faellig = e.target.value; });
 $('blatt-aufgabe').addEventListener('focusout', (e) => { if (e.target.dataset.datum === 'bearbeiten') setTimeout(aufgabeZeichnen, 80); });
@@ -311,6 +319,7 @@ $('aufgabe-sichern').onclick = () => {
   schliesse();
   render();
 };
+$('aufgabe-titel').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('aufgabe-sichern').click(); } });
 $('aufgabe-loeschen').onclick = () => {
   const id = bearbeite.id;
   setzeStatus(id, 'geloescht');
@@ -323,13 +332,13 @@ $('aufgabe-loeschen').onclick = () => {
 const norm = (t) => t.trim().toLowerCase();
 function renderEinkauf() {
   const alle = F['einkauf.json']?.artikel || [];
-  const art = alle.filter((a) => a.status !== 'archiv');
+  const art = alle.filter((a) => a.status !== 'archiv' && a.status !== 'geloescht');
   const offen = art.filter((a) => a.status === 'offen').sort((a, b) => (a.zeit || '').localeCompare(b.zeit || ''));
   const erl = art.filter((a) => a.status === 'erledigt').sort((a, b) => (b.erledigt || '').localeCompare(a.erledigt || ''));
   const zeile = (a) => {
     const e = a.status === 'erledigt';
-    return `<div class="zeile artikel${e ? ' erl' : ''}" data-id="${esc(a.id)}" style="--c:#ff9500;--cd:#e08600">
-      <button class="kreis${e ? ' an' : ''}" aria-label="Abhaken">${icon('check', 14, 3.2)}</button><span class="haupt">${esc(a.text)}</span></div>`;
+    return `<div class="zeile task artikel${e ? ' erl' : ''}" data-id="${esc(a.id)}" style="--c:#ff9500;--cd:#e08600"><div class="vorn">
+      <button class="kreis${e ? ' an' : ''}" aria-label="Abhaken">${icon('check', 14, 3.2)}</button><span class="haupt">${esc(a.text)}</span></div><button class="loesch" data-eloesch>Löschen</button></div>`;
   };
   $('einkauf-liste').innerHTML = !bereit ? platzhalter(4) : offen.length || erl.length
     ? (offen.length ? `<div class="gruppe-titel"><span>Einkaufsliste</span><span class="zahl">${offen.length}</span></div><div class="gruppe">${offen.map(zeile).join('')}</div>` : '')
@@ -342,7 +351,7 @@ function renderEinkauf() {
   const zaehler = {};
   for (const a of alle) {
     const k = norm(a.text);
-    if (!k || offenSet.has(k)) continue;
+    if (!k || offenSet.has(k) || a.status === 'geloescht') continue; // Gelöschtes (Tippfehler) wird nie vorgeschlagen
     const z = zaehler[k] || (zaehler[k] = { text: a.text.trim(), n: 0, zeit: '' });
     z.n++;
     if ((a.zeit || '') > z.zeit) z.zeit = a.zeit || '';
@@ -356,6 +365,10 @@ function einkaufAendern(op, msg) {
   badges();
 }
 function artikelNeu(texte) {
+  // Was schon offen auf der Liste steht, kommt kein zweites Mal dazu
+  const da = new Set((F['einkauf.json']?.artikel || []).filter((a) => a.status === 'offen').map((a) => norm(a.text)));
+  texte = texte.filter((t) => { const k = norm(t); if (da.has(k)) return false; da.add(k); return true; });
+  if (!texte.length) { toast('Steht schon auf der Liste'); return; }
   const neu = texte.map((text) => ({ id: uid('e'), text, status: 'offen', zeit: isoZeit(new Date()), erledigt: null }));
   merkeNeu(neu.map((a) => a.id));
   einkaufAendern({ neu }, 'Einkauf hinzugefügt');
@@ -375,6 +388,20 @@ $('einkauf-liste').addEventListener('click', (e) => {
   const id = zeile.dataset.id;
   const jetzt = (F['einkauf.json']?.artikel || []).find((x) => x.id === id);
   if (!jetzt) return;
+  if (e.target.closest('[data-eloesch]')) {
+    const vorher = jetzt.status;
+    const weg = () => {
+      einkaufAendern({ ids: [id], felder: { status: 'geloescht' } }, 'Artikel gelöscht');
+      toast('Gelöscht', { label: 'Rückgängig', fn: () => { merkeNeu(id); einkaufAendern({ ids: [id], felder: { status: vorher } }, 'Wiederhergestellt'); } });
+    };
+    if (zeile.classList.contains('weg')) { weg(); return; } // schon weggewischt
+    zeile.classList.add('weg');
+    haptik();
+    rausfahren(zeile).then(weg);
+    return;
+  }
+  if (W.eben()) return;
+  if (W.offen()) { W.zu(); return; }
   if (zeile.classList.contains('weg')) return;
   const status = jetzt.status === 'erledigt' ? 'offen' : 'erledigt';
   zeile.classList.add('weg');
@@ -501,15 +528,16 @@ function renderVerlauf() {
   }
   const flaeche = n > 1 ? `${pfad} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z` : '';
   const labels = daten.map((d, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${MON[Number(d.monat.slice(5)) - 1]}</text>`).join('');
-  const punkte = daten.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.wert)}" r="${i === n - 1 ? 5 : 3.5}" fill="${i === n - 1 ? 'var(--karte)' : farbe}" stroke="${farbe}" stroke-width="${i === n - 1 ? 3 : 0}"/>`).join('');
+  const saeule = n === 1 ? `<rect x="${x(0) - 24}" y="${y(daten[0].wert)}" width="48" height="${Math.max(0, y(0) - y(daten[0].wert))}" rx="9" fill="${farbe}" fill-opacity=".85"/>` : '';
+  const punkte = n === 1 ? '' : daten.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.wert)}" r="${i === n - 1 ? 5 : 3.5}" fill="${i === n - 1 ? 'var(--karte)' : farbe}" stroke="${farbe}" stroke-width="${i === n - 1 ? 3 : 0}"/>`).join('');
   const bl = budget ? `<line x1="${L}" x2="${W - R}" y1="${y(budget)}" y2="${y(budget)}" stroke="${farbe}" stroke-dasharray="4 5" stroke-opacity=".6"/><text x="${W - R}" y="${y(budget) - 6}" text-anchor="end">Budget</text>` : '';
   $('verlauf-svg').innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="color:var(--text)"><defs><linearGradient id="vg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${farbe}" stop-opacity=".28"/><stop offset="1" stop-color="${farbe}" stop-opacity="0"/></linearGradient></defs>${g}${bl}
-    ${flaeche ? `<path d="${flaeche}" fill="url(#vg)"/>` : ''}<path d="${pfad}" fill="none" stroke="${farbe}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>${punkte}${labels}</svg>`;
+    ${flaeche ? `<path d="${flaeche}" fill="url(#vg)"/>` : ''}<path d="${pfad}" fill="none" stroke="${farbe}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>${saeule}${punkte}${labels}</svg>`;
   const werte = daten.map((d) => d.wert);
   const voll = werte.slice(0, -1);
   const schnitt = voll.length ? voll.reduce((a, b) => a + b, 0) / voll.length : werte[werte.length - 1] || 0;
   $('verlauf-zahlen').innerHTML = `<div class="kennzahl"><div class="k">Dieser Monat</div><div class="v">${euro(werte[werte.length - 1] || 0)}</div></div>
-    <div class="kennzahl"><div class="k">${voll.length ? `Ø ${voll.length} volle Monate` : 'Ø pro Monat'}</div><div class="v">${euro(schnitt)}</div></div>`;
+    <div class="kennzahl"><div class="k">${voll.length ? `Ø ${voll.length} volle Monate` : 'Ø pro Monat'}</div><div class="v">${euro(schnitt)}</div></div>${n === 1 ? '<div class="kz-hinweis">Die Kurve entsteht, sobald ein zweiter Monat dazukommt.</div>' : ''}`;
 }
 $('verlauf-chips').addEventListener('click', (e) => {
   const b = e.target.closest('[data-vk]');
@@ -642,6 +670,7 @@ $('kosten-sichern').onclick = () => {
   schliesse();
   render();
 };
+[$('betrag'), $('notiz')].forEach((el) => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('kosten-sichern').click(); } }));
 $('kosten-loeschen').onclick = () => {
   const id = kostenId;
   const setze = (v) => { aendereOp('kosten.json', { liste: 'buchungen', ids: [id], felder: { storniert: v } }, v ? 'Ausgabe gelöscht' : 'Ausgabe wiederhergestellt').catch(() => {}); if (!v) merkeNeu(id); render(); };
@@ -655,11 +684,12 @@ let geladen = false;
 async function laden(erst = false) {
   try {
     await ladeAlle(DATEIEN);
-    $('banner').innerHTML = '';
+    const off = istOffline();
+    $('banner').innerHTML = off ? `<div class="banner">${icon('wolke', 20)}<span>Offline. Du siehst den gespeicherten Stand, Änderungen werden nachgereicht.</span></div>` : '';
     if (!bereit) { bereit = true; if (!offenesBlatt) render(); }
     if (erst) await routine();
     geladen = true;
-    if (offenNachzureichen()) { const n = await nachholen(); if (n) toast(`${n} ${n === 1 ? 'Änderung' : 'Änderungen'} nachgereicht`); }
+    if (!off && offenNachzureichen()) { const n = await nachholen(); if (n) toast(`${n} ${n === 1 ? 'Änderung' : 'Änderungen'} nachgereicht`); }
   } catch (e) {
     bereit = true;
     $('banner').innerHTML = e instanceof FehlerToken
@@ -680,19 +710,6 @@ async function wetter() {
 }
 function datum() { $('datum').textContent = headerText(new Date()); }
 
-datum();
-setInterval(datum, 60000);
-bereit = ausCache(DATEIEN);
-zeigeTab();
-await laden(true);
-wetter();
-starteZyklus(() => laden(), 60);
-starteZyklus(wetter, 900);
-addEventListener('online', () => laden());
-starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);
-
-
-
 /* ---------- Hintergrund: gleiche Szene wie am Panel, aber ruhig ---------- */
 let wetterCode = 0;
 const szene = erstelleSzene(document.getElementById('szene'));
@@ -704,6 +721,23 @@ function szeneTakt() {
 }
 szeneTakt();
 starteZyklus(szeneTakt, 120);
+
+// Kopf dunkelt ab, sobald Inhalt darunter durchläuft
+addEventListener('scroll', () => document.body.classList.toggle('gescrollt', scrollY > 24), { passive: true });
+
+datum();
+setInterval(datum, 60000);
+bereit = ausCache(DATEIEN);
+zeigeTab();
+await laden(true);
+szeneTakt();
+wetter();
+starteZyklus(() => laden(), 60);
+starteZyklus(wetter, 900);
+addEventListener('online', () => laden());
+starteZyklus(() => routine().then(() => { if (geladen && !offenesBlatt) render(); }), 1800);
+
+
 
 /* ---------- Diagnose: dreimal auf das Datum tippen ---------- */
 {

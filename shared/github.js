@@ -35,6 +35,13 @@ function headers() {
   return { Authorization: `Bearer ${config().token}`, Accept: 'application/vnd.github+json' };
 }
 
+// Hängt das Netz (z. B. WLAN-Portal), gilt die Anfrage nach 15 s als fehlgeschlagen, genau wie offline.
+async function holen(u, opt = {}, ms = 15000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try { return await fetch(u, { ...opt, signal: ac.signal }); } finally { clearTimeout(t); }
+}
+
 export class FehlerToken extends Error {}
 export class FehlerKonflikt extends Error {}
 
@@ -43,7 +50,7 @@ export class FehlerKonflikt extends Error {}
 export async function lesen(path) {
   if (!config().token) throw new FehlerToken('Kein Token hinterlegt. Bitte in den Einstellungen eintragen.');
   try {
-    const r = await fetch(url(path), { headers: headers(), cache: 'no-store' });
+    const r = await holen(url(path), { headers: headers(), cache: 'no-store' });
     if (r.status === 401 || r.status === 403) throw new FehlerToken('Token ungültig oder abgelaufen. Bitte in den Einstellungen erneuern.');
     if (r.status === 404) return null;
     if (!r.ok) throw new Error(`GitHub: Status ${r.status}`);
@@ -62,7 +69,7 @@ export async function lesen(path) {
 export async function schreiben(path, data, sha, nachricht = 'Update') {
   const body = { message: nachricht, content: enc(JSON.stringify(data, null, 2) + '\n') };
   if (sha) body.sha = sha;
-  const r = await fetch(url(path), {
+  const r = await holen(url(path), {
     method: 'PUT',
     headers: { ...headers(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

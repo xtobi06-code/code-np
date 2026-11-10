@@ -183,3 +183,24 @@ body.glasapp { --bg: #02040b; --karte: rgba(16, 22, 40, .42); --karte2: rgba(255
 .buchung .haupt > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .buchung .betrag { flex: none; white-space: nowrap; }
 .eintrag .haupt { min-width: 0; }
+
+/* Wochenkarte: zugeklappt ein Balken mit einem Abschnitt je Modul */
+.wk-kurz { min-height: 46px; cursor: pointer; gap: 14px; -webkit-user-select: none; user-select: none; transition: background-color .2s; }
+.wk-kurz:active { background-color: rgba(255, 255, 255, .07); transition-duration: 0s; }
+.wk-seg { flex: 1; display: flex; gap: 3px; height: 8px; }
+.wk-seg > span { min-width: 6px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--c) 26%, transparent); }
+.wk-seg i { display: block; height: 100%; border-radius: inherit; background: var(--c); }
+.wk-pfeil { flex: none; width: 8px; height: 8px; margin: -4px 3px 0 0; border-right: 2px solid var(--t2); border-bottom: 2px solid var(--t2); transform: rotate(45deg); transition: transform .3s var(--ease-out); }
+.wk-pfeil.auf { transform: translateY(4px) rotate(-135deg); }
+
+/* Kopf: dunkler Verlauf, sobald Inhalt unter den runden Knöpfen durchläuft */
+body.glasapp::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 104px); z-index: 20; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: linear-gradient(to bottom, rgba(2, 4, 11, .92) 0%, rgba(2, 4, 11, .7) 50%, rgba(2, 4, 11, 0) 100%); }
+body.glasapp.gescrollt::before { opacity: 1; }
+/* Tab-Leiste: dichter, damit Listentext darunter nicht mitzulesen ist */
+.glasapp .tabbar { background: rgba(12, 16, 30, .76); -webkit-backdrop-filter: blur(30px) saturate(170%); backdrop-filter: blur(30px) saturate(170%); }
+/* Im Blatt umbrechen die Chips, statt am Rand abgeschnitten zu werden */
+.blatt .chips { flex-wrap: wrap; overflow: visible; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+/* Überfälliges ist am Datum erkennbar */
+.task .neben.ueber { color: #ff8e85; }
+.kz-hinweis { grid-column: 1 / -1; text-align: center; font-size: 13px; color: var(--t2); }

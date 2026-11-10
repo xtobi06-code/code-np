@@ -1,4 +1,4 @@
-import { F, ladeAlle, ausCache, aendereOp, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi, szenenDatum } from '../shared/core.js';
+import { F, ladeAlle, ausCache, aendereOp, istOffline, nachholen, offenNachzureichen, beiOffline, routine, beiFehler, FehlerToken, panelEinst, lichtModi, szenenDatum } from '../shared/core.js';
 import { module as modulListe, kwVon, erzeugen, offene, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, termineAm, modulFarbe, badgeHtml } from '../shared/tasks.js';
 import { uebersicht, status as budgetStatus } from '../shared/finance.js';
 import { holeWetter, starteZyklus, haltWachen, toast } from '../shared/app.js';
@@ -6,7 +6,7 @@ import { icon, wetterSymbol } from '../shared/icons.js';
 import { erstelleSzene } from '../shared/scene.js';
 import { ordner, rohdatei } from '../shared/github.js';
 import { rausfahren, merkeNeu, zeigeNeue, weich, wischLoeschen, reduziert } from '../shared/bewegung.js';
-import { uid, isoZeit, WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, euro0, hexRgba, kwKey, montag, addDays, fmtDM } from '../shared/util.js';
+import { uid, isoZeit, WT_LANG, MON_LANG, isoWeek, clockText, isoDate, esc, euro, euro0, hexRgba, kwKey, montag, addDays, fmtDM, fmtWtDM } from '../shared/util.js';
 
 const $ = (id) => document.getElementById(id);
 const DATEIEN = ['einstellungen.json', 'regeln.json', 'aufgaben.json', 'einkauf.json', 'termine.json', 'kosten.json', 'kategorien.json', 'dauerkosten.json'];
@@ -175,20 +175,6 @@ function zeileHtml(a) {
   return `<div class="task${heute ? ' heute' : ''}${ueber ? ' ueber' : ''}" data-id="${esc(a.id)}" style="${farbStil(farbeVon(a))}">
     <button class="loesch" data-loesch aria-label="Löschen">Löschen</button><div class="vorn"><span class="kreis">${icon('check', 16, 3.2)}</span><span class="titel">${titelHtml(a)}</span>${meta ? `<span class="meta">${esc(heute ? 'Heute' : meta)}</span>` : ''}</div></div>`;
 }
-function einpassen(box, gesamt) {
-  const rows = [...box.querySelectorAll('.task')];
-  if (!rows.length) return;
-  const reserve = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.6;
-  const top = box.getBoundingClientRect().top;
-  let sichtbar = rows.length;
-  for (let i = 0; i < rows.length; i++) {
-    const unten = rows[i].getBoundingClientRect().bottom - top;
-    const grenze = i === rows.length - 1 ? box.clientHeight : box.clientHeight - reserve;
-    if (unten > grenze + 1) { sichtbar = i; break; }
-  }
-  rows.slice(sichtbar).forEach((r) => r.remove());
-  if (sichtbar < gesamt) box.insertAdjacentHTML('beforeend', `<div class="mehr">+ ${gesamt - sichtbar} weitere</div>`);
-}
 function kuerzlichErledigt(name) {
   const grenze = Date.now() - 48 * 3600 * 1000;
   return (F['aufgaben.json']?.aufgaben || [])
@@ -202,7 +188,12 @@ function liste(name) {
   $(`n-${name}`).textContent = auf.length ? String(auf.length) : '';
   if (!auf.length && !erl.length) { box.innerHTML = `<div class="leer">${icon('check', 38, 2.4)}<span>Alles erledigt</span></div>`; return; }
   const alt = box.scrollTop;
-  box.innerHTML = auf.map(zeileHtml).join('') + erl.map((a) => zeileHtml(a).replace('class="task', 'class="task erledigt')).join('');
+  // Überfällig, Heute und Offen bekommen eine kleine Überschrift, sobald es mehr als eine Gruppe gibt
+  const ueber = auf.filter((a) => ueberfaellig(a));
+  const heute = auf.filter((a) => !ueberfaellig(a) && istHeute(a) && metaText(a) !== '');
+  const rest = auf.filter((a) => !ueber.includes(a) && !heute.includes(a));
+  const kopf = (t, l, art = '') => (l.length && (ueber.length || heute.length) ? `<div class="l-gruppe${art}">${t}<span>${l.length}</span></div>` : '');
+  box.innerHTML = kopf('Überfällig', ueber, ' ueber') + ueber.map(zeileHtml).join('') + kopf('Heute', heute) + heute.map(zeileHtml).join('') + kopf('Offen', rest) + rest.map(zeileHtml).join('') + erl.map((a) => zeileHtml(a).replace('class="task', 'class="task erledigt')).join('');
   box.scrollTop = alt;
   zeigeNeue(box);
 }
@@ -232,7 +223,7 @@ $('app').addEventListener('click', (e) => {
   }
   // Haken füllt sich, Zeile schrumpft weg und taucht unten bei den Erledigten wieder auf
   row.classList.add('fertig');
-  const zeit = new Date().toISOString();
+  const zeit = isoZeit(new Date());
   setTimeout(() => rausfahren(row, 280).then(() => {
     setzeAufgabe(id, { status: 'erledigt', erledigt: zeit }, 'Abgehakt');
     merkeNeu(id);
@@ -370,7 +361,7 @@ function wocheKarte() {
   const alle = F['aufgaben.json']?.aufgaben || [];
   // Die komplette Woche: schon erzeugte Aufgaben plus die, die in den nächsten Tagen noch entstehen.
   const kommend = erzeugen(F['einstellungen.json'], F['regeln.json']?.regeln || [], alle, addDays(montag(jetzt), 6)).map((a) => ({ ...a, status: 'offen' }));
-  const auf = [...alle, ...kommend].filter((a) => a.liste === 'studium' && a.regel && (a.kw ? a.kw === k : a.datum >= mo && a.datum <= so));
+  const auf = [...alle, ...kommend].filter((a) => a.liste === 'studium' && a.regel && a.status !== 'geloescht' && (a.kw ? a.kw === k : a.datum >= mo && a.datum <= so));
   if (!auf.length) return null;
   const fertig = auf.filter((a) => a.status === 'erledigt').length;
   const nachModul = {};
@@ -378,7 +369,7 @@ function wocheKarte() {
   const zeilen = Object.entries(nachModul).slice(0, 6).map(([m, v]) =>
     `<div class="b-zeile" style="--c:${modulFarbe(m)}"><span class="name" style="width:3.2rem">${badgeHtml(m)}</span><span class="bar"><i data-w="p-w-${esc(m)}" style="width:${(v.f / v.g) * 100}%"></i></span><span class="n" style="width:2.6rem">${v.f}/${v.g}</span></div>`).join('');
   return `<div class="k-label" style="--lc:#d98cff">${icon('kappe', 16, 2.2)}Woche · KW ${isoWeek(jetzt)}</div>
-    <div class="k-gross"><span data-n="p-wf" data-v="${fertig}">${fertig}</span> von ${auf.length} erledigt</div><div class="b-fuss" style="margin-top:auto">${zeilen}</div>`;
+    <div class="k-gross"><span><span data-n="p-wf" data-v="${fertig}">${fertig}</span> von ${auf.length} erledigt</span></div><div class="b-fuss" style="margin-top:auto">${zeilen}</div>`;
 }
 let stapelIndex = 0;
 let stapelPause = 0;
@@ -464,8 +455,9 @@ async function laden(dateien = DATEIEN) {
     $('hinweis').style.display = 'none';
     const h = isoDate(new Date());
     if (tagGeladen !== h || dateien === DATEIEN) { tagGeladen = h; await routine(); }
-    if (offenNachzureichen()) await nachholen();
-    status(null);
+    const off = istOffline();
+    if (!off && offenNachzureichen()) await nachholen();
+    if (off) status('warn', 'Offline · zeige letzten Stand'); else status(null);
   } catch (e) {
     if (e instanceof FehlerToken) { $('hinweis').style.display = 'grid'; status('bad', 'Nicht verbunden'); return; }
     status('warn', 'Offline · zeige letzten Stand');
@@ -548,16 +540,18 @@ dlg.addEventListener('input', () => { dlgZeit = Date.now(); });
 function kopf(titel) {
   return `<div class="d-kopf"><b>${esc(titel)}</b><button class="d-zu" data-zu aria-label="Schließen">${icon('x', 18, 2.4)}</button></div>`;
 }
+const istDatum = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 function aufgabeDialog(listeName) {
   const st = listeName === 'studium';
   const mods = Object.keys(modulListe());
   const chips = (name, opts, wahl) => `<div class="d-chips">${opts.map(([v, t]) => `<button class="d-chip${wahl === v ? ' an' : ''}" data-${name}="${esc(v)}">${esc(t)}</button>`).join('')}</div>`;
   const zeichne = () => {
     const a = dlgArt;
+    const eigen = istDatum(a.faellig);
     dlg.innerHTML = `${kopf(st ? 'Neue Aufgabe · Studium' : 'Neue Aufgabe · Leben')}
       <input class="d-feld" id="d-titel" placeholder="Was ist zu tun?" enterkeyhint="done" autocomplete="off" value="${esc(a.titel)}">
       ${st ? `<div class="d-label">Modul</div>${chips('modul', [['', 'Keins'], ...mods.map((m) => [m, m])], a.modul)}` : ''}
-      <div class="d-label">Fällig</div>${chips('faellig', [['', 'Ohne Datum'], ['heute', 'Heute'], ['morgen', 'Morgen']], a.faellig)}
+      <div class="d-label">Fällig</div>${chips('faellig', [['', 'Ohne Datum'], ['heute', 'Heute'], ['morgen', 'Morgen']], a.faellig).replace(/<\/div>$/, `<label class="d-chip d-datum${eigen ? ' an' : ''}">${icon('kalender', 16, 2.2)}${eigen ? esc(fmtWtDM(a.faellig)) : 'Datum'}<input type="date" id="d-datum" min="${isoDate(new Date())}" value="${eigen ? a.faellig : ''}"></label></div>`)}
       <button class="d-ok" id="d-ok" ${a.titel.trim() ? '' : 'disabled'}>Hinzufügen</button>`;
   };
   dialogAuf('', { typ: 'aufgabe', liste: listeName, titel: '', modul: '', faellig: '', zeichne });
@@ -570,7 +564,7 @@ function aufgabeSpeichern() {
   if (!titel) return;
   const neu = { id: uid('a'), liste: a.liste, titel, status: 'offen', erstellt: isoZeit(new Date()), erledigt: null };
   if (a.liste === 'studium' && a.modul) neu.modul = a.modul;
-  if (a.faellig) neu.faellig = isoDate(addDays(new Date(), a.faellig === 'morgen' ? 1 : 0));
+  if (a.faellig) neu.faellig = istDatum(a.faellig) ? a.faellig : isoDate(addDays(new Date(), a.faellig === 'morgen' ? 1 : 0));
   aendereOp('aufgaben.json', { liste: 'aufgaben', neu }, 'Neue Aufgabe').catch(() => {});
   merkeNeu(neu.id);
   dialogZu();
@@ -578,7 +572,7 @@ function aufgabeSpeichern() {
   toast('Aufgabe hinzugefügt');
 }
 
-function einkaufArtikel() { return (F['einkauf.json']?.artikel || []).filter((a) => a.status !== 'archiv'); }
+function einkaufArtikel() { return (F['einkauf.json']?.artikel || []).filter((a) => a.status !== 'archiv' && a.status !== 'geloescht'); }
 function einkaufVorschau() {
   const offen = einkaufArtikel().filter((a) => a.status === 'offen').sort((x, y) => (x.zeit || '').localeCompare(y.zeit || ''));
   $('n-einkauf').textContent = offen.length ? String(offen.length) : '';
@@ -634,14 +628,22 @@ dlg.addEventListener('input', (e) => {
     if (ok) ok.disabled = !dlgArt.titel.trim();
   }
 });
+// Datum: erst nach dem Schließen des Kalenders neu zeichnen, sonst bricht iPadOS die Auswahl ab
+dlg.addEventListener('change', (e) => { if (dlgArt && dlgArt.typ === 'aufgabe' && e.target.id === 'd-datum') dlgArt.faellig = e.target.value || ''; });
+dlg.addEventListener('focusout', (e) => {
+  if (e.target.id !== 'd-datum') return;
+  setTimeout(() => { if (dlgArt && dlgArt.typ === 'aufgabe') { dlgArt.zeichne(); if ($('d-titel')) $('d-titel').focus(); } }, 80);
+});
 dlg.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !dlgArt) return;
   e.preventDefault();
   if (dlgArt.typ === 'aufgabe' && e.target.id === 'd-titel') { aufgabeSpeichern(); return; }
   if (dlgArt.typ === 'einkauf' && e.target.id === 'd-einkauf') {
-    const teile = e.target.value.split(',').map((t) => t.trim()).filter(Boolean);
-    if (!teile.length) return;
+    // Was schon offen auf der Liste steht, kommt kein zweites Mal dazu
+    const da = new Set(einkaufArtikel().filter((a) => a.status === 'offen').map((a) => a.text.trim().toLowerCase()));
+    const teile = e.target.value.split(',').map((t) => t.trim()).filter(Boolean).filter((t) => { const k = t.toLowerCase(); if (da.has(k)) return false; da.add(k); return true; });
     e.target.value = '';
+    if (!teile.length) return;
     const neu = teile.map((text) => ({ id: uid('e'), text, status: 'offen', zeit: isoZeit(new Date()), erledigt: null }));
     einkaufOp({ neu }, 'Einkauf hinzugefügt');
     $('d-einkauf').focus();
