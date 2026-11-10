@@ -2,6 +2,7 @@ import { F, ladeAlle, ausCache, aendereOp, istOffline, nachholen, beiOffline, of
 import { erzeugen, badgeHtml, kwVon, offene, erledigte, metaText, titelHtml, farbeVon, farbStil, istHeute, ueberfaellig, module, modulFarbe } from './shared/tasks.js';
 import { uebersicht, verlauf, status, katSymbol, monatName, monatKey, aktive } from './shared/finance.js';
 import { holeWetter, starteZyklus, toast } from './shared/app.js';
+import { berichtDatei, berichtMonate, berichtVorwahl } from './shared/bericht.js';
 import { erstelleSzene } from './shared/scene.js';
 import { panelEinst, szenenDatum } from './shared/core.js';
 import { icon, wetterSymbol } from './shared/icons.js';
@@ -434,6 +435,7 @@ function ring(anteil, farbe, groesse = 64, key = 'ring') {
 }
 function renderFinanzen() {
   const k = kats();
+  $('bericht-knopf').hidden = !bereit || !k.length;
   if (!bereit) { $('fin-held').innerHTML = '<div class="ph-balken" style="width:40%;height:12px"></div><div class="ph-balken" style="width:62%;height:38px;margin:10px 0"></div><div class="ph-balken" style="width:100%;height:10px;margin-top:18px"></div>'; $('fin-kat').innerHTML = phZeilen(4); $('fin-letzte').innerHTML = ''; return; }
   if (!k.length) { $('fin-held').innerHTML = `<div class="leer" style="padding:14px 6px 8px"><span class="leer-ic" style="--lc:#30d158">${icon('geldbeutel', 28, 2.2)}</span><b>Noch keine Kategorien</b><span>Lege in den <a href="einstellungen.html">Einstellungen</a> Kategorien mit Budget an.</span></div>`; $('fin-kat').innerHTML = ''; $('fin-letzte').innerHTML = ''; return; }
   const u = uebersicht(F['kosten.json'], k, F['einstellungen.json'], S.zeitraum);
@@ -677,6 +679,63 @@ $('kosten-loeschen').onclick = () => {
   setze(true);
   schliesse();
   toast('Ausgabe gelöscht', { label: 'Rückgängig', fn: () => setze(false) });
+};
+
+/* ---------- Monatsbericht (PDF) ---------- */
+// Das PDF entsteht schon beim Öffnen des Blatts, damit „Teilen“ direkt auf den Tipp folgt (iOS verlangt das).
+let berichtMonat = '';
+let berichtFertig = null;
+function berichtChips() {
+  const jahr = String(new Date().getFullYear());
+  $('bericht-monate').innerHTML = berichtMonate(F['kosten.json']).map((k) =>
+    `<button class="chip${k === berichtMonat ? ' an' : ''}" data-bm="${k}">${monatName(k)}${k.startsWith(jahr) ? '' : ` ${k.slice(0, 4)}`}</button>`).join('');
+}
+async function berichtBauen() {
+  const knopf = $('bericht-teilen');
+  const m = berichtMonat;
+  berichtFertig = null;
+  knopf.disabled = true;
+  knopf.textContent = 'PDF wird erstellt …';
+  $('bericht-fehler').textContent = '';
+  try {
+    const f = await berichtDatei({ kosten: F['kosten.json'], kats: kats(), einst: F['einstellungen.json'], dauer: F['dauerkosten.json'] }, m);
+    if (m !== berichtMonat) return; // inzwischen anderer Monat gewählt
+    berichtFertig = f;
+    knopf.disabled = false;
+    knopf.textContent = 'PDF teilen';
+  } catch {
+    if (m !== berichtMonat) return;
+    knopf.textContent = 'Nicht verfügbar';
+    $('bericht-fehler').textContent = 'Das PDF konnte nicht erstellt werden. Verbindung prüfen und erneut öffnen.';
+  }
+}
+$('bericht-knopf').onclick = () => {
+  berichtMonat = berichtVorwahl(F['kosten.json']);
+  berichtChips();
+  oeffne('blatt-bericht');
+  berichtBauen();
+};
+$('bericht-monate').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-bm]');
+  if (!b || b.dataset.bm === berichtMonat) return;
+  berichtMonat = b.dataset.bm;
+  berichtChips();
+  berichtBauen();
+});
+$('bericht-teilen').onclick = () => {
+  const f = berichtFertig;
+  if (!f) return;
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    navigator.share({ files: [f] }).then(schliesse).catch(() => {}); // Abbrechen im Teilen-Menü ist kein Fehler
+    return;
+  }
+  const url = URL.createObjectURL(f);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = f.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  schliesse();
 };
 
 /* ---------- Laden ---------- */

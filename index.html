@@ -63,6 +63,7 @@
       <div class="gruppe-titel"><span>Kategorien</span><span class="zahl" id="fin-hinweis"></span></div>
       <div class="gruppe" id="fin-kat"></div>
       <div id="fin-letzte"></div>
+      <button class="textknopf" id="bericht-knopf" hidden>Monatsbericht als PDF</button>
     </div>
     <div id="fin-verlauf" hidden>
       <div class="chips" id="verlauf-chips" style="margin-bottom:14px"></div>
@@ -107,6 +108,16 @@
   <div class="chips" id="aufgabe-faellig" style="margin-bottom:10px"></div>
   <input type="date" id="aufgabe-datum" class="datumfeld voll" hidden>
   <button class="loeschknopf" id="aufgabe-loeschen">Aufgabe löschen</button>
+</div>
+
+<!-- Monatsbericht -->
+<div class="blatt glas" id="blatt-bericht">
+  <div class="griff"></div>
+  <div class="kopfzeile"><button class="rund-k" data-zu aria-label="Schließen"></button><b>Monatsbericht</b><span style="width:38px"></span></div>
+  <div class="unterlabel">Monat</div>
+  <div class="chips" id="bericht-monate" style="margin-bottom:18px"></div>
+  <button class="hauptknopf" id="bericht-teilen" disabled>PDF wird erstellt …</button>
+  <div class="fehler" id="bericht-fehler"></div>
 </div>
 
 <script type="module" src="phone.js"></script>

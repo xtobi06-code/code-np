@@ -234,7 +234,7 @@ function anleitungHtml() {
 }
 
 const APP_DATEIEN = ['./', 'index.html', 'einstellungen.html', 'phone.js', 'phone.css', 'einstellungen.js', 'panel/', 'panel/index.html', 'panel/panel.js', 'panel/panel.css',
-  'shared/app.js', 'shared/bewegung.js', 'shared/core.js', 'shared/finance.js', 'shared/github.js', 'shared/icons.js', 'shared/scene.css', 'shared/scene.js', 'shared/style.css', 'shared/tasks.js', 'shared/util.js', 'shared/weather.js'];
+  'shared/app.js', 'shared/bewegung.js', 'shared/bericht.js', 'shared/vendor/jspdf.umd.min.js', 'shared/core.js', 'shared/finance.js', 'shared/github.js', 'shared/icons.js', 'shared/scene.css', 'shared/scene.js', 'shared/style.css', 'shared/tasks.js', 'shared/util.js', 'shared/weather.js'];
 function appHtml() {
   return `<div class="gruppe-titel">App</div>
   <div class="gruppe"><div class="zeile"><button class="textknopf" style="padding:0" id="app-neu">App neu laden (neueste Version holen)</button></div></div>
