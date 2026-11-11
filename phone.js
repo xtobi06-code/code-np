@@ -494,7 +494,7 @@ function renderFinanzen() {
   } else {
     const grenze = z === '3m' ? 3 : z === '12m' ? 12 : 999;
     const erlaubt = new Set([...new Set(alle.map((b) => b.datum.slice(0, 7)))].slice(0, grenze));
-    html = `<div class="gruppe-titel"><span>Ausgaben nach Monat</span><span class="zahl">${z === '3m' ? 'letzte 3 Monate' : z === '12m' ? 'letzte 12 Monate' : 'alle Monate'}</span></div>${gruppiert(alle.filter((b) => erlaubt.has(b.datum.slice(0, 7))))}${z === 'monat' ? '<button class="textknopf" id="fin-alle">Weniger anzeigen</button>' : ''}`;
+    html = `<div class="gruppe-titel"><span>Ausgaben nach Monat</span></div>${gruppiert(alle.filter((b) => erlaubt.has(b.datum.slice(0, 7))))}${z === 'monat' ? '<button class="textknopf" id="fin-alle">Weniger anzeigen</button>' : ''}`;
   }
   $('fin-letzte').innerHTML = html;
   weich($('fin-held'));
