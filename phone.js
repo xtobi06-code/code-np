@@ -238,8 +238,13 @@ function zubehoer() {
 }
 const zub = $('todo-zubehoer');
 $('todo-input').addEventListener('focus', () => { zub.hidden = false; zubehoer(); });
-$('todo-input').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('todo-input') && !zub.contains(document.activeElement)) zub.hidden = true; }, 150));
-zub.addEventListener('pointerdown', (e) => { if (!e.target.closest('input')) e.preventDefault(); });
+let zubKlick = 0; // iOS nimmt das Feld trotz preventDefault den Fokus: Tipp auf einen Chip darf das Zubehör nicht schließen
+$('todo-input').addEventListener('blur', () => setTimeout(() => {
+  if (Date.now() - zubKlick < 700) return;
+  if (document.activeElement !== $('todo-input') && !zub.contains(document.activeElement)) zub.hidden = true;
+}, 150));
+zub.addEventListener('pointerdown', (e) => { zubKlick = Date.now(); if (!e.target.closest('input')) e.preventDefault(); });
+zub.addEventListener('touchstart', () => { zubKlick = Date.now(); }, { passive: true });
 zub.addEventListener('click', (e) => {
   const m = e.target.closest('[data-modul]');
   const f = e.target.closest('[data-faellig]');
@@ -247,6 +252,8 @@ zub.addEventListener('click', (e) => {
   if (m) S.neuModul = m.dataset.modul;
   if (f) S.neuFaellig = f.dataset.faellig;
   zubehoer();
+  zubKlick = Date.now();
+  $('todo-input').focus({ preventScroll: true });
 });
 // Datum: erst nach dem Schließen des Kalenders neu zeichnen, sonst bricht iOS die Auswahl ab
 zub.addEventListener('change', (e) => { if (e.target.dataset.datum === 'neu') S.neuFaellig = e.target.value; });
