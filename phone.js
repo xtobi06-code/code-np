@@ -350,7 +350,7 @@ function renderEinkauf() {
       <button class="kreis${e ? ' an' : ''}" aria-label="Abhaken">${icon('check', 14, 3.2)}</button><span class="haupt">${esc(a.text)}</span></div><button class="loesch" data-eloesch>Löschen</button></div>`;
   };
   $('einkauf-liste').innerHTML = !bereit ? platzhalter(4) : offen.length || erl.length
-    ? (offen.length ? `<div class="gruppe-titel"><span>Einkaufsliste</span><span class="zahl">${offen.length}</span></div><div class="gruppe">${offen.map(zeile).join('')}</div>` : '')
+    ? (offen.length ? `<div class="gruppe-titel"><span>Einkaufsliste</span><span class="zahl">${offen.length}<button class="titel-teilen" id="einkauf-teilen" aria-label="Liste teilen">${icon('teilen', 17, 2.2)}</button></span></div><div class="gruppe">${offen.map(zeile).join('')}</div>` : '')
       + (erl.length ? `<div class="gruppe-titel"><span>Im Wagen</span><span class="zahl">${erl.length}</span></div><div class="gruppe">${erl.map(zeile).join('')}</div>` : '')
     : leer('wagen', '#ff9f0a', 'Liste ist leer', 'Tippe oben einen Artikel ein, mehrere mit Komma trennen.');
   zeigeNeue($('einkauf-liste'));
@@ -421,6 +421,21 @@ $('einkauf-liste').addEventListener('click', (e) => {
     merkeNeu(id);
     einkaufAendern({ ids: [id], felder: { status, erledigt: status === 'erledigt' ? isoZeit(new Date()) : null } }, 'Einkauf abgehakt');
   }), 160);
+});
+// Offene Artikel als Text teilen (Teilen-Menü, sonst Zwischenablage)
+$('tab-einkauf').addEventListener('click', async (e) => {
+  if (!e.target.closest('#einkauf-teilen')) return;
+  const offen = (F['einkauf.json']?.artikel || []).filter((x) => x.status === 'offen').sort((x, y) => (x.zeit || '').localeCompare(y.zeit || ''));
+  if (!offen.length) return;
+  const name = F['einstellungen.json']?.name;
+  const text = `Einkaufsliste${name ? ` von ${name}` : ''}\n\n${offen.map((x) => `• ${x.text}`).join('\n')}`;
+  try {
+    if (navigator.share) await navigator.share({ text });
+    else { await navigator.clipboard.writeText(text); toast('Liste kopiert'); }
+  } catch (err) {
+    if (err?.name === 'AbortError') return; // Abbrechen im Teilen-Menü ist kein Fehler
+    try { await navigator.clipboard.writeText(text); toast('Liste kopiert'); } catch { toast('Teilen nicht möglich'); }
+  }
 });
 $('einkauf-aufraeumen').onclick = () => {
   const ids = (F['einkauf.json']?.artikel || []).filter((a) => a.status === 'erledigt').map((a) => a.id);

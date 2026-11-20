@@ -220,3 +220,6 @@ body.glasapp.gescrollt::before { opacity: 1; }
 .monatkopf .mk-n { color: var(--t2); font-size: 13px; flex: 1; }
 .monatkopf .mk-summe { font-variant-numeric: tabular-nums; font-weight: 600; }
 .monatkopf .wk-pfeil { margin-top: -4px; }
+
+.titel-teilen { background: none; border: 0; color: var(--accent); padding: 12px 8px 12px 14px; margin: -12px -8px -12px 0; vertical-align: middle; line-height: 0; }
+.titel-teilen:active { opacity: .5; }
